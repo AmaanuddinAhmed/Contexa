@@ -7,8 +7,12 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:test": "tsx src/testDatabase.ts", 
-    "seed": "tsx src/seed.ts"
+    "db:test": "tsx src/testDatabase.ts",
+    "seed": "tsx src/seed.ts",
+    "test:profile": "tsx src/testProfileMatching.ts",
+    "test:baseline": "tsx src/testProfileBaseline.ts",
+    "test:context": "tsx src/testContextMatching.ts",
+    "test:complementarity": "tsx src/testComplementarity.ts"
   },
   "keywords": [],
   "author": "",
