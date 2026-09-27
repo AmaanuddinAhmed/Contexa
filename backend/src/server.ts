@@ -6,6 +6,7 @@ import { connectDatabase } from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import contextRoutes from "./routes/contextRoutes.js";
+import recommendationRoutes from "./routes/recommendationRoutes.js";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/context", contextRoutes);
+app.use("/api/v1/recommendations", recommendationRoutes);
 
 app.get("/api/v1/health", (_req, res) => {
     res.json({
