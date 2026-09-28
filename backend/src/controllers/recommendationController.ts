@@ -143,6 +143,21 @@ export const getRecommendationList = async (
             return;
         }
 
+        if (
+            error instanceof Error &&
+            error.message === "RECOMMENDATION_SERVICE_UNAVAILABLE"
+        ) {
+            res.status(503).json({
+                success: false,
+                error: {
+                    code: "RECOMMENDATION_SERVICE_UNAVAILABLE",
+                    message:
+                        "The recommendation engine is not available. Please try again shortly."
+                }
+            });
+            return;
+        }
+
         console.error(
             "Get recommendations error:",
             error

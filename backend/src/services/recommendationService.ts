@@ -2,14 +2,6 @@ import mongoose from "mongoose";
 import { Context, IContext } from "../models/Context.js";
 import { Profile, IProfile } from "../models/Profile.js";
 import { User } from "../models/User.js";
-import {
-    calculateContextCompatibility,
-    ContextMatchResult
-} from "./contextMatchingService.js";
-import {
-    calculateProfileSimilarity,
-    ProfileMatchResult
-} from "./profileMatchingService.js";
 
 /**
  * PROFILE_ONLY  - baseline: stable profile information only.
@@ -31,10 +23,6 @@ export const isRecommendationMode = (
 ): value is RecommendationMode =>
     (RECOMMENDATION_MODES as readonly string[]).includes(value);
 
-export type RecommendationBreakdown =
-    | ProfileMatchResult["breakdown"]
-    | ContextMatchResult["breakdown"];
-
 export interface Recommendation {
     userId: string;
     profile: {
@@ -48,7 +36,7 @@ export interface Recommendation {
         collaborationPreferences?: string[];
     };
     score: number;
-    breakdown: RecommendationBreakdown;
+    breakdown: Record<string, number>;
 }
 
 export interface RecommendationResult {
@@ -61,6 +49,14 @@ export interface RecommendationResult {
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 
+// Must not exceed MAX_CANDIDATES in recommendation-service/main.py.
+const MAX_CANDIDATES = 500;
+
+const RECOMMENDATION_SERVICE_TIMEOUT_MS = 10_000;
+
+const getRecommendationServiceUrl = (): string =>
+    process.env.RECOMMENDATION_SERVICE_URL ?? "http://localhost:8000";
+
 const normalizeLimit = (limit?: number): number => {
     if (!Number.isFinite(limit)) {
         return DEFAULT_LIMIT;
@@ -72,34 +68,74 @@ const normalizeLimit = (limit?: number): number => {
     );
 };
 
+// Only the fields the matching engine reads are sent to Python.
+const toMatchingProfile = (profile: IProfile) => ({
+    skills: profile.skills,
+    interests: profile.interests,
+    experienceLevel: profile.experienceLevel ?? null,
+    collaborationPreferences: profile.collaborationPreferences ?? []
+});
+
+const toMatchingContext = (context: IContext) => ({
+    need: context.need,
+    activity: context.activity,
+    availability: context.availability,
+    interactionPreference: context.interactionPreference
+});
+
+interface ScoredCandidate {
+    userId: string;
+    score: number;
+    breakdown: Record<string, number>;
+}
+
+interface RecommendationServiceResponse {
+    mode: RecommendationMode;
+    recommendations: ScoredCandidate[];
+}
+
 /**
- * Scores one candidate under the given mode. Only this step differs between
- * modes; candidate generation is identical, so both modes rank the same pool.
+ * Stage 2 (scoring + ranking) runs in the Python recommendation service.
+ * This service only computes scores; it never reads the database.
  */
-export const scoreCandidate = (
-    mode: RecommendationMode,
-    requesterProfile: IProfile,
-    candidateProfile: IProfile,
-    requesterContext: IContext | null,
-    candidateContext: IContext
-): { score: number; breakdown: RecommendationBreakdown } => {
-    if (mode === "PROFILE_ONLY") {
-        return calculateProfileSimilarity(
-            requesterProfile,
-            candidateProfile
+const requestScores = async (payload: unknown): Promise<ScoredCandidate[]> => {
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+    };
+
+    if (process.env.INTERNAL_API_KEY) {
+        headers["X-Internal-Key"] = process.env.INTERNAL_API_KEY;
+    }
+
+    let response: Response;
+
+    try {
+        response = await fetch(
+            `${getRecommendationServiceUrl()}/internal/recommend`,
+            {
+                method: "POST",
+                headers,
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(RECOMMENDATION_SERVICE_TIMEOUT_MS)
+            }
         );
+    } catch (error) {
+        console.error("Recommendation service unreachable:", error);
+        throw new Error("RECOMMENDATION_SERVICE_UNAVAILABLE");
     }
 
-    if (!requesterContext) {
-        throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
+    if (!response.ok) {
+        console.error(
+            "Recommendation service error:",
+            response.status,
+            await response.text()
+        );
+        throw new Error("RECOMMENDATION_SERVICE_UNAVAILABLE");
     }
 
-    return calculateContextCompatibility(
-        requesterProfile,
-        candidateProfile,
-        requesterContext,
-        candidateContext
-    );
+    const data = (await response.json()) as RecommendationServiceResponse;
+
+    return data.recommendations;
 };
 
 export const getRecommendations = async (
@@ -135,6 +171,9 @@ export const getRecommendations = async (
         throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
     }
 
+    // Stage 1: candidate generation. Identical for both modes, so both rank
+    // the same pool. (Indexed, bounded retrieval arrives with the Next.js
+    // API routes in step C.)
     const [candidateProfiles, candidateContexts] =
         await Promise.all([
             Profile.find({
@@ -169,7 +208,8 @@ export const getRecommendations = async (
         );
     }
 
-    const recommendations: Recommendation[] = [];
+    const profileMap = new Map<string, IProfile>();
+    const candidates = [];
 
     for (const candidateProfile of candidateProfiles) {
         const candidateId =
@@ -186,23 +226,44 @@ export const getRecommendations = async (
             continue;
         }
 
-        const result = scoreCandidate(
-            mode,
-            profile as IProfile,
-            candidateProfile as IProfile,
-            context as IContext | null,
-            candidateContext
-        );
+        profileMap.set(candidateId, candidateProfile);
 
-        recommendations.push({
+        candidates.push({
             userId: candidateId,
+            profile: toMatchingProfile(candidateProfile),
+            context: toMatchingContext(candidateContext)
+        });
+    }
+
+    if (candidates.length > MAX_CANDIDATES) {
+        // Refuse rather than silently truncate: truncation would change which
+        // people each mode can recommend.
+        throw new Error("CANDIDATE_POOL_TOO_LARGE");
+    }
+
+    // Stage 2: scoring and ranking in the Python service.
+    const scored = await requestScores({
+        mode,
+        limit,
+        requester: {
+            profile: toMatchingProfile(profile),
+            context: context ? toMatchingContext(context) : null
+        },
+        candidates
+    });
+
+    // Attach display fields (name, bio, ...) that the scorer never sees.
+    const recommendations: Recommendation[] = scored.map((result) => {
+        const candidateProfile = profileMap.get(result.userId) as IProfile;
+
+        return {
+            userId: result.userId,
             profile: {
                 name: candidateProfile.name,
                 bio: candidateProfile.bio,
                 education: candidateProfile.education,
                 role: candidateProfile.role,
-                experienceLevel:
-                    candidateProfile.experienceLevel,
+                experienceLevel: candidateProfile.experienceLevel,
                 skills: candidateProfile.skills,
                 interests: candidateProfile.interests,
                 collaborationPreferences:
@@ -210,17 +271,13 @@ export const getRecommendations = async (
             },
             score: result.score,
             breakdown: result.breakdown
-        });
-    }
-
-    recommendations.sort(
-        (first, second) => second.score - first.score
-    );
+        };
+    });
 
     return {
         mode,
-        recommendations: recommendations.slice(0, limit),
-        count: Math.min(recommendations.length, limit),
+        recommendations,
+        count: recommendations.length,
         limit
     };
 };
