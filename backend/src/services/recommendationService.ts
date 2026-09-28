@@ -6,6 +6,34 @@ import {
     calculateContextCompatibility,
     ContextMatchResult
 } from "./contextMatchingService.js";
+import {
+    calculateProfileSimilarity,
+    ProfileMatchResult
+} from "./profileMatchingService.js";
+
+/**
+ * PROFILE_ONLY  - baseline: stable profile information only.
+ * CONTEXT_AWARE - proposed: profile + dynamic context + directional complementarity.
+ */
+export const RECOMMENDATION_MODES = [
+    "PROFILE_ONLY",
+    "CONTEXT_AWARE"
+] as const;
+
+export type RecommendationMode =
+    (typeof RECOMMENDATION_MODES)[number];
+
+export const DEFAULT_RECOMMENDATION_MODE: RecommendationMode =
+    "CONTEXT_AWARE";
+
+export const isRecommendationMode = (
+    value: string
+): value is RecommendationMode =>
+    (RECOMMENDATION_MODES as readonly string[]).includes(value);
+
+export type RecommendationBreakdown =
+    | ProfileMatchResult["breakdown"]
+    | ContextMatchResult["breakdown"];
 
 export interface Recommendation {
     userId: string;
@@ -20,10 +48,11 @@ export interface Recommendation {
         collaborationPreferences?: string[];
     };
     score: number;
-    breakdown: ContextMatchResult["breakdown"];
+    breakdown: RecommendationBreakdown;
 }
 
 export interface RecommendationResult {
+    mode: RecommendationMode;
     recommendations: Recommendation[];
     count: number;
     limit: number;
@@ -43,9 +72,40 @@ const normalizeLimit = (limit?: number): number => {
     );
 };
 
+/**
+ * Scores one candidate under the given mode. Only this step differs between
+ * modes; candidate generation is identical, so both modes rank the same pool.
+ */
+export const scoreCandidate = (
+    mode: RecommendationMode,
+    requesterProfile: IProfile,
+    candidateProfile: IProfile,
+    requesterContext: IContext | null,
+    candidateContext: IContext
+): { score: number; breakdown: RecommendationBreakdown } => {
+    if (mode === "PROFILE_ONLY") {
+        return calculateProfileSimilarity(
+            requesterProfile,
+            candidateProfile
+        );
+    }
+
+    if (!requesterContext) {
+        throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
+    }
+
+    return calculateContextCompatibility(
+        requesterProfile,
+        candidateProfile,
+        requesterContext,
+        candidateContext
+    );
+};
+
 export const getRecommendations = async (
     userId: string,
-    requestedLimit?: number
+    requestedLimit?: number,
+    mode: RecommendationMode = DEFAULT_RECOMMENDATION_MODE
 ): Promise<RecommendationResult> => {
     const limit = normalizeLimit(requestedLimit);
 
@@ -69,7 +129,9 @@ export const getRecommendations = async (
         throw new Error("PROFILE_NOT_FOUND");
     }
 
-    if (!context) {
+    // The baseline does not use the requester's context, so it is only
+    // required in CONTEXT_AWARE mode.
+    if (mode === "CONTEXT_AWARE" && !context) {
         throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
     }
 
@@ -124,10 +186,11 @@ export const getRecommendations = async (
             continue;
         }
 
-        const result = calculateContextCompatibility(
+        const result = scoreCandidate(
+            mode,
             profile as IProfile,
             candidateProfile as IProfile,
-            context as IContext,
+            context as IContext | null,
             candidateContext
         );
 
@@ -155,6 +218,7 @@ export const getRecommendations = async (
     );
 
     return {
+        mode,
         recommendations: recommendations.slice(0, limit),
         count: Math.min(recommendations.length, limit),
         limit
