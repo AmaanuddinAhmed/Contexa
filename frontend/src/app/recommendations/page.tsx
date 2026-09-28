@@ -16,20 +16,36 @@ interface Recommendation {
     collaborationPreferences?: string[];
   };
   score: number;
-  breakdown: {
-    profile: number;
-    need: number;
-    activity: number;
-    availability: number;
-    interactionPreference: number;
-    needFulfillmentA: number;
-    needFulfillmentB: number;
-  };
+  // PROFILE_ONLY returns skills/interests/experience/collaborationPreferences;
+  // CONTEXT_AWARE returns profile/need/activity/availability/... factors.
+  breakdown: Record<string, number>;
 }
+
+type RecommendationMode = "PROFILE_ONLY" | "CONTEXT_AWARE";
+
+const MODE_OPTIONS: {
+  value: RecommendationMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "CONTEXT_AWARE",
+    label: "Context-aware",
+    description:
+      "People ranked by your profile, your current context, and how well you meet each other's needs.",
+  },
+  {
+    value: "PROFILE_ONLY",
+    label: "Profile only",
+    description:
+      "Baseline: people ranked by profile similarity alone. Your current context is ignored.",
+  },
+];
 
 interface RecommendationResponse {
   success: boolean;
   data: {
+    mode: RecommendationMode;
     recommendations: Recommendation[];
     count: number;
     limit: number;
@@ -47,6 +63,10 @@ const formatFactorName = (factor: string) => {
     interactionPreference: "Interaction Preference",
     needFulfillmentA: "Need Fulfillment A",
     needFulfillmentB: "Need Fulfillment B",
+    skills: "Skills",
+    interests: "Interests",
+    experience: "Experience",
+    collaborationPreferences: "Collaboration Preferences",
   };
 
   return names[factor] || factor;
@@ -54,6 +74,7 @@ const formatFactorName = (factor: string) => {
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [mode, setMode] = useState<RecommendationMode>("CONTEXT_AWARE");
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -72,7 +93,7 @@ export default function RecommendationsPage() {
 
     try {
       const response = await api<RecommendationResponse>(
-        "/recommendations?limit=10",
+        `/recommendations?limit=10&mode=${mode}`,
         {
           token,
         },
@@ -88,7 +109,10 @@ export default function RecommendationsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mode]);
+
+  const activeMode =
+    MODE_OPTIONS.find((option) => option.value === mode) ?? MODE_OPTIONS[0];
 
   useEffect(() => {
     loadRecommendations();
@@ -173,16 +197,34 @@ export default function RecommendationsPage() {
       <section className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">
-              Context-aware discovery
-            </p>
-
             <h1 className="text-4xl font-bold tracking-tight text-zinc-950">
               Your Recommendations
             </h1>
 
+            <div
+              role="group"
+              aria-label="Matching mode"
+              className="mt-5 inline-flex rounded-xl border border-zinc-200 bg-white p-1"
+            >
+              {MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={mode === option.value}
+                  onClick={() => setMode(option.value)}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                    mode === option.value
+                      ? "bg-black text-white"
+                      : "text-zinc-600 hover:text-black"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
             <p className="mt-3 max-w-2xl text-zinc-600">
-              People ranked according to your profile and current context.
+              {activeMode.description}
             </p>
           </div>
 

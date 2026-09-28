@@ -1,7 +1,10 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.js";
 import {
-    getRecommendations
+    DEFAULT_RECOMMENDATION_MODE,
+    getRecommendations,
+    isRecommendationMode,
+    RECOMMENDATION_MODES
 } from "../services/recommendationService.js";
 
 export const getRecommendationList = async (
@@ -54,9 +57,41 @@ export const getRecommendationList = async (
             return;
         }
 
+        const rawMode = req.query.mode;
+
+        if (
+            rawMode !== undefined &&
+            typeof rawMode !== "string"
+        ) {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: "INVALID_MODE",
+                    message: "Mode must be a single value."
+                }
+            });
+            return;
+        }
+
+        const mode = rawMode === undefined
+            ? DEFAULT_RECOMMENDATION_MODE
+            : rawMode.trim().toUpperCase();
+
+        if (!isRecommendationMode(mode)) {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: "INVALID_MODE",
+                    message: `Mode must be one of: ${RECOMMENDATION_MODES.join(", ")}.`
+                }
+            });
+            return;
+        }
+
         const result = await getRecommendations(
             req.userId,
-            limit
+            limit,
+            mode
         );
 
         res.json({
