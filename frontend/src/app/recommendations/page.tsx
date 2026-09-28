@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Link from "next/link";
 
 interface Recommendation {
   userId: string;
@@ -120,7 +121,7 @@ export default function RecommendationsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-zinc-50 p-6">
+      <main className="flex-1 bg-zinc-50 p-6">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8">
             <div className="h-9 w-72 animate-pulse rounded bg-zinc-200" />
@@ -142,7 +143,7 @@ export default function RecommendationsPage() {
 
   if (message) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
+      <main className="flex flex-1 items-center justify-center bg-zinc-50 p-6">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
           <h1 className="text-2xl font-bold text-zinc-900">
             Recommendations unavailable
@@ -158,12 +159,12 @@ export default function RecommendationsPage() {
               Try Again
             </button>
 
-            <a
+            <Link
               href="/context"
               className="rounded-xl border border-zinc-200 px-5 py-3 font-medium text-zinc-900 transition hover:bg-zinc-50"
             >
               Update Context
-            </a>
+            </Link>
           </div>
         </div>
       </main>
@@ -171,29 +172,7 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <a href="/" className="text-xl font-bold tracking-tight">
-            CONTEXA
-          </a>
-
-          <nav className="flex items-center gap-5 text-sm font-medium">
-            <a href="/profile" className="text-zinc-600 hover:text-black">
-              Profile
-            </a>
-
-            <a href="/context" className="text-zinc-600 hover:text-black">
-              Context
-            </a>
-
-            <a href="/recommendations" className="text-black">
-              Recommendations
-            </a>
-          </nav>
-        </div>
-      </header>
-
+    <main className="flex-1 bg-zinc-50">
       <section className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
@@ -247,12 +226,12 @@ export default function RecommendationsPage() {
               context.
             </p>
 
-            <a
+            <Link
               href="/context"
               className="mt-6 inline-block rounded-xl bg-black px-5 py-3 font-medium text-white"
             >
               Update Context
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">

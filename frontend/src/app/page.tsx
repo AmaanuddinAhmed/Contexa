@@ -3,45 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            CONTEXA
-          </Link>
-
-          <nav className="flex items-center gap-5 text-sm font-medium">
-            <Link href="/profile" className="text-zinc-600 hover:text-black">
-              Profile
-            </Link>
-
-            <Link href="/context" className="text-zinc-600 hover:text-black">
-              Context
-            </Link>
-
-            <Link
-              href="/recommendations"
-              className="text-zinc-600 hover:text-black"
-            >
-              Recommendations
-            </Link>
-
-            <div className="flex items-center gap-3">
-              <Link href="/login" className="text-zinc-600 hover:text-black">
-                Login
-              </Link>
-
-              <Link
-                href="/register"
-                className="rounded-lg bg-black px-4 py-2 text-white hover:bg-zinc-800"
-              >
-                Register
-              </Link>
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      <section className="mx-auto flex min-h-[calc(100vh-73px)] max-w-6xl items-center px-6 py-20">
+      <section className="mx-auto flex max-w-6xl items-center px-6 py-20">
         <div className="max-w-3xl">
           <p className="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Context-aware people ecosystem
