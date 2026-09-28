@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { setToken } from "@/lib/auth";
 
 interface RegisterResponse {
   success: boolean;
@@ -56,10 +57,10 @@ export default function RegisterPage() {
         }),
       });
 
-      localStorage.setItem("contexa_token", response.data.token);
+      setToken(response.data.token);
 
       // A new account has no profile or context yet, so start onboarding at /profile.
-      router.push("/profile");
+      router.push("/profile?onboarding=1");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Registration failed.",
@@ -69,7 +70,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
+    <main className="flex flex-1 items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         <h1 className="text-3xl font-bold">Create a CONTEXA account</h1>
 

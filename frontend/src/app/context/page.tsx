@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Context {
   goal: string;
@@ -19,7 +21,14 @@ interface ContextResponse {
   };
 }
 
+// Set by the register page (?onboarding=1) so new users move through
+// profile -> context -> recommendations without hunting for the next page.
+const isOnboarding = (): boolean =>
+  new URLSearchParams(window.location.search).get("onboarding") === "1";
+
 export default function ContextPage() {
+  const router = useRouter();
+  const [saved, setSaved] = useState(false);
   const [goal, setGoal] = useState("");
   const [need, setNeed] = useState("");
   const [activity, setActivity] = useState("");
@@ -69,6 +78,7 @@ export default function ContextPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSaved(false);
 
     const token = localStorage.getItem("contexa_token");
 
@@ -94,7 +104,13 @@ export default function ContextPage() {
         }),
       });
 
-      setMessage("Context saved successfully.");
+      if (isOnboarding()) {
+        router.push("/recommendations");
+        return;
+      }
+
+      setMessage("Context saved.");
+      setSaved(true);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to save context.",
@@ -103,11 +119,13 @@ export default function ContextPage() {
   };
 
   if (loading) {
-    return <main className="p-8">Loading context...</main>;
+    return (
+      <main className="mx-auto w-full max-w-2xl p-8">Loading context...</main>
+    );
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <main className="mx-auto w-full max-w-2xl p-8">
       <h1 className="mb-2 text-3xl font-bold">Your Current Context</h1>
 
       <p className="mb-8 text-gray-600">
@@ -205,7 +223,16 @@ export default function ContextPage() {
           Save Context
         </button>
 
-        {message && <p className="text-sm">{message}</p>}
+        {message && (
+          <p className="text-sm">
+            {message}{" "}
+            {saved && (
+              <Link href="/recommendations" className="font-medium underline">
+                See your recommendations
+              </Link>
+            )}
+          </p>
+        )}
       </form>
     </main>
   );

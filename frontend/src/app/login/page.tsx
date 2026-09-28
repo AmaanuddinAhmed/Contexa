@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { setToken } from "@/lib/auth";
 
 interface LoginResponse {
   success: boolean;
@@ -38,7 +39,7 @@ export default function LoginPage() {
         }),
       });
 
-      localStorage.setItem("contexa_token", response.data.token);
+      setToken(response.data.token);
 
       router.push("/recommendations");
     } catch (error) {
@@ -48,7 +49,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
+    <main className="flex flex-1 items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         <h1 className="text-3xl font-bold">CONTEXA Login</h1>
 

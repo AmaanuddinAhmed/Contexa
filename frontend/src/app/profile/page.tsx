@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Profile {
   name: string;
@@ -34,7 +36,17 @@ const emptyProfile: Profile = {
   visibility: "public",
 };
 
+// Must match the levels the matching engine recognises exactly.
+const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
+
+// Set by the register page (?onboarding=1) so new users move through
+// profile -> context -> recommendations without hunting for the next page.
+const isOnboarding = (): boolean =>
+  new URLSearchParams(window.location.search).get("onboarding") === "1";
+
 export default function ProfilePage() {
+  const router = useRouter();
+  const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
@@ -79,6 +91,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSaved(false);
 
     const token = localStorage.getItem("contexa_token");
 
@@ -108,8 +121,14 @@ export default function ProfilePage() {
         }),
       });
 
+      if (isOnboarding()) {
+        router.push("/context?onboarding=1");
+        return;
+      }
+
       setProfile(response.data.profile ?? emptyProfile);
-      setMessage("Profile saved successfully.");
+      setMessage("Profile saved.");
+      setSaved(true);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to save profile.",
@@ -118,11 +137,13 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <main className="p-8">Loading profile...</main>;
+    return (
+      <main className="mx-auto w-full max-w-2xl p-8">Loading profile...</main>
+    );
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <main className="mx-auto w-full max-w-2xl p-8">
       <h1 className="mb-6 text-3xl font-bold">My Profile</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -186,8 +207,8 @@ export default function ProfilePage() {
 
         <div>
           <label className="mb-1 block font-medium">Experience Level</label>
-          <input
-            value={profile.experienceLevel}
+          <select
+            value={profile.experienceLevel ?? ""}
             onChange={(event) =>
               setProfile({
                 ...profile,
@@ -195,8 +216,14 @@ export default function ProfilePage() {
               })
             }
             className="w-full rounded border p-3"
-            placeholder="Beginner, Intermediate, Advanced..."
-          />
+          >
+            <option value="">Select one</option>
+            {EXPERIENCE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -253,7 +280,16 @@ export default function ProfilePage() {
           Save Profile
         </button>
 
-        {message && <p className="text-sm">{message}</p>}
+        {message && (
+          <p className="text-sm">
+            {message}{" "}
+            {saved && (
+              <Link href="/context" className="font-medium underline">
+                Update your context
+              </Link>
+            )}
+          </p>
+        )}
       </form>
     </main>
   );
