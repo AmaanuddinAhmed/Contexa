@@ -40,4 +40,24 @@ export const useIsLoggedIn = (): boolean =>
         subscribe,
         () => getToken() !== null,
         () => false, // server render: assume logged out
-    );
+    ); 
+
+
+export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+
+/**
+ * Like useIsLoggedIn, but "loading" until the browser has been checked, so
+ * guards never redirect during the first (server-rendered) paint.
+ */
+export const useAuthStatus = (): AuthStatus =>
+  useSyncExternalStore(
+    subscribe,
+    () => (getToken() !== null ? "authenticated" : "unauthenticated"),
+    () => "loading",
+  );
+
+/** Only same-site paths, e.g. "/context" (blocks "//evil.com" redirects). */
+export const safeNextPath = (value: string | null): string | null =>
+  value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\")
+    ? value
+    : null;

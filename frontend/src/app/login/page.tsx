@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { setToken } from "@/lib/auth";
+import { safeNextPath, setToken } from "@/lib/auth";
 
 interface LoginResponse {
   success: boolean;
@@ -41,7 +41,11 @@ export default function LoginPage() {
 
       setToken(response.data.token);
 
-      router.push("/recommendations");
+      // Return to the page that sent the user here, if any.
+      const next = safeNextPath(
+        new URLSearchParams(window.location.search).get("next"),
+      );
+      router.push(next ?? "/recommendations");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Login failed.");
       setIsSubmitting(false);
