@@ -1,5 +1,5 @@
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+// Same origin: the API is served by this Next.js app (src/app/api/v1).
+const API_BASE_URL = "/api/v1";
 
 interface ApiOptions extends RequestInit {
     token?: string;
