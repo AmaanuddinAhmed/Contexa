@@ -8,6 +8,8 @@ const NAV_LINKS = [
   { href: "/profile", label: "Profile" },
   { href: "/context", label: "Context" },
   { href: "/recommendations", label: "Recommendations" },
+  { href: "/connections", label: "Connections" },
+  { href: "/feedback", label: "Rate matches" },
 ];
 
 export default function SiteHeader() {

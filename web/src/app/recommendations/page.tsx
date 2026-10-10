@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import {
+  ConnectionState,
+  ConnectionsResponse,
+  toStateByUserId,
+} from "@/lib/connections";
 
 interface Recommendation {
   userId: string;
@@ -57,6 +62,61 @@ interface RecommendationResponse {
 
 const formatPercentage = (value: number) => `${Math.round(value * 100)}%`;
 
+function ConnectControl({
+  state,
+  busy,
+  error,
+  onConnect,
+}: {
+  state: ConnectionState;
+  busy: boolean;
+  error?: string;
+  onConnect: () => void;
+}) {
+  const base =
+    "mt-6 block w-full rounded-xl px-4 py-3 text-center text-sm font-medium transition";
+
+  return (
+    <>
+      {state === "connected" && (
+        <p className={`${base} bg-zinc-100 text-zinc-700`}>✓ Connected</p>
+      )}
+
+      {state === "outgoing" && (
+        <p className={`${base} border border-zinc-200 text-zinc-500`}>
+          Request sent
+        </p>
+      )}
+
+      {state === "incoming" && (
+        <Link
+          href="/connections"
+          className={`${base} border border-black text-black hover:bg-zinc-50`}
+        >
+          They sent you a request: respond
+        </Link>
+      )}
+
+      {state === "none" && (
+        <button
+          type="button"
+          onClick={onConnect}
+          disabled={busy}
+          className={`${base} bg-black text-white hover:bg-zinc-800 disabled:opacity-50`}
+        >
+          {busy ? "Sending..." : "Connect"}
+        </button>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
 const formatFactorName = (factor: string) => {
   const names: Record<string, string> = {
     profile: "Profile",
@@ -81,6 +141,13 @@ export default function RecommendationsPage() {
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [connectionStates, setConnectionStates] = useState<
+    Map<string, ConnectionState>
+  >(new Map());
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [connectErrors, setConnectErrors] = useState<Record<string, string>>(
+    {},
+  );
 
   const loadRecommendations = useCallback(async () => {
     const token = localStorage.getItem("contexa_token");
@@ -95,14 +162,20 @@ export default function RecommendationsPage() {
     setMessage("");
 
     try {
-      const response = await api<RecommendationResponse>(
-        `/recommendations?limit=10&mode=${mode}`,
-        {
+      const [response, connections] = await Promise.all([
+        api<RecommendationResponse>(`/recommendations?limit=10&mode=${mode}`, {
           token,
-        },
-      );
+        }),
+        // Connection states only drive the buttons, so a failure here
+        // should not hide the recommendations.
+        api<ConnectionsResponse>("/connections", { token }).catch(() => null),
+      ]);
 
       setRecommendations(response.data.recommendations);
+      setConnectionStates(
+        connections ? toStateByUserId(connections.data) : new Map(),
+      );
+      setConnectErrors({});
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -113,6 +186,44 @@ export default function RecommendationsPage() {
       setLoading(false);
     }
   }, [mode]);
+
+  const sendConnectionRequest = async (
+    recommendation: Recommendation,
+    rank: number,
+  ) => {
+    const token = localStorage.getItem("contexa_token");
+
+    if (!token) {
+      return;
+    }
+
+    setConnectingId(recommendation.userId);
+    setConnectErrors((errors) => ({ ...errors, [recommendation.userId]: "" }));
+
+    try {
+      await api("/connections", {
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          recipientId: recommendation.userId,
+          // Recorded for evaluation: which mode showed this person, and where.
+          source: { mode, rank, score: recommendation.score },
+        }),
+      });
+
+      setConnectionStates((states) =>
+        new Map(states).set(recommendation.userId, "outgoing"),
+      );
+    } catch (error) {
+      setConnectErrors((errors) => ({
+        ...errors,
+        [recommendation.userId]:
+          error instanceof Error ? error.message : "Unable to send request.",
+      }));
+    } finally {
+      setConnectingId(null);
+    }
+  };
 
   const activeMode =
     MODE_OPTIONS.find((option) => option.value === mode) ?? MODE_OPTIONS[0];
@@ -384,12 +495,16 @@ export default function RecommendationsPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="mt-6 w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
-                  >
-                    View Profile
-                  </button>
+                  <ConnectControl
+                    state={
+                      connectionStates.get(recommendation.userId) ?? "none"
+                    }
+                    busy={connectingId === recommendation.userId}
+                    error={connectErrors[recommendation.userId]}
+                    onConnect={() =>
+                      sendConnectionRequest(recommendation, index + 1)
+                    }
+                  />
                 </article>
               );
             })}
