@@ -1,10 +1,10 @@
 import "server-only";
 import mongoose from "mongoose";
-import { Context } from "@/server/models/Context";
+import { Context, currentContextFilter } from "@/server/models/Context";
 import { Profile } from "@/server/models/Profile";
 import { generateCandidates } from "./candidateGeneration";
 import { DEFAULT_RECOMMENDATION_MODE, RecommendationMode } from "./modes";
-import { requestScores, toMatchingContext, toMatchingProfile } from "./scoringClient";
+import { MatchReason, requestScores, toMatchingContext, toMatchingProfile } from "./scoringClient";
 
 export interface Recommendation {
     userId: string;
@@ -20,6 +20,7 @@ export interface Recommendation {
     };
     score: number;
     breakdown: Record<string, number>;
+    reasons: MatchReason[];
 }
 
 export interface RecommendationResult {
@@ -55,7 +56,7 @@ export const getRecommendations = async (
 
     const [profile, context] = await Promise.all([
         Profile.findOne({ userId: userObjectId }),
-        Context.findOne({ userId: userObjectId, isActive: true }).sort({ createdAt: -1 })
+        Context.findOne({ userId: userObjectId, ...currentContextFilter() }).sort({ createdAt: -1 })
     ]);
 
     if (!profile) {
@@ -107,7 +108,8 @@ export const getRecommendations = async (
                 collaborationPreferences: candidateProfile.collaborationPreferences
             },
             score: result.score,
-            breakdown: result.breakdown
+            breakdown: result.breakdown,
+            reasons: result.reasons ?? []
         };
     });
 

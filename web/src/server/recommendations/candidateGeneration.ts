@@ -1,6 +1,6 @@
 import "server-only";
 import mongoose from "mongoose";
-import { Context, IContext } from "@/server/models/Context";
+import { Context, currentContextFilter, IContext } from "@/server/models/Context";
 import { Profile, IProfile } from "@/server/models/Profile";
 import { User } from "@/server/models/User";
 import { toMatchTerms } from "./terms";
@@ -133,7 +133,7 @@ const retrieveCandidateIds = async (
         profileTerms.length === 0
             ? Promise.resolve([])
             : Context.find({
-                isActive: true,
+                ...currentContextFilter(),
                 userId: { $ne: requesterId },
                 needTerms: { $in: profileTerms }
             })
@@ -247,10 +247,10 @@ export const generateCandidates = async (
 
     const candidateUserIds = candidateProfiles.map((profile) => profile.userId);
 
-    // Eligibility: the account is active and has an active context.
+    // Eligibility: the account is active and has a current (active, unexpired) context.
     const [activeUserIds, candidateContexts] = await Promise.all([
         User.find({ _id: { $in: candidateUserIds }, isActive: true }).distinct("_id"),
-        Context.find({ userId: { $in: candidateUserIds }, isActive: true })
+        Context.find({ userId: { $in: candidateUserIds }, ...currentContextFilter() })
     ]);
 
     const activeUserIdSet = new Set(activeUserIds.map((id) => id.toString()));

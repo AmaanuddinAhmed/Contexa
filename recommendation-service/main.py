@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from explain import explain_match
 from matching import Mode, rank_candidates
 
 # Upper bound on candidates per request. Candidate generation (retrieval)
@@ -57,10 +58,17 @@ class RecommendRequest(BaseModel):
     candidates: list[CandidateIn] = Field(max_length=MAX_CANDIDATES)
 
 
+class ReasonOut(BaseModel):
+    code: str
+    text: str
+    items: list[str]
+
+
 class RecommendationOut(BaseModel):
     userId: str
     score: float
     breakdown: dict[str, float]
+    reasons: list[ReasonOut]
 
 
 class RecommendResponse(BaseModel):
@@ -105,6 +113,7 @@ def recommend(
             },
         )
 
+    requester_profile = request.requester.profile.model_dump()
     requester_context = (
         request.requester.context.model_dump()
         if request.requester.context is not None
@@ -113,15 +122,30 @@ def recommend(
 
     ranked = rank_candidates(
         mode=request.mode,
-        requester_profile=request.requester.profile.model_dump(),
+        requester_profile=requester_profile,
         requester_context=requester_context,
         candidates=[candidate.model_dump() for candidate in request.candidates],
         limit=request.limit,
     )
 
+    # Explain only the people actually returned (at most `limit`).
+    candidates_by_id = {candidate.userId: candidate for candidate in request.candidates}
+    recommendations = []
+
+    for result in ranked:
+        candidate = candidates_by_id[result["userId"]]
+        reasons = explain_match(
+            request.mode,
+            requester_profile,
+            candidate.profile.model_dump(),
+            requester_context,
+            candidate.context.model_dump(),
+        )
+        recommendations.append({**result, "reasons": reasons})
+
     return RecommendResponse(
         mode=request.mode,
-        recommendations=ranked,
-        count=len(ranked),
+        recommendations=recommendations,
+        count=len(recommendations),
         limit=request.limit,
     )

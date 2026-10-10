@@ -20,6 +20,8 @@ interface Recommendation {
   // PROFILE_ONLY returns skills/interests/experience/collaborationPreferences;
   // CONTEXT_AWARE returns profile/need/activity/availability/... factors.
   breakdown: Record<string, number>;
+  // Why this person was recommended, strongest factor first.
+  reasons: { code: string; text: string; items: string[] }[];
 }
 
 type RecommendationMode = "PROFILE_ONLY" | "CONTEXT_AWARE";
@@ -236,7 +238,7 @@ export default function RecommendationsPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {recommendations.map((recommendation, index) => {
-              const { profile, score, breakdown } = recommendation;
+              const { profile, score, breakdown, reasons } = recommendation;
 
               return (
                 <article
@@ -283,6 +285,32 @@ export default function RecommendationsPage() {
                         }}
                       />
                     </div>
+                  </div>
+
+                  <div className="mt-5 rounded-xl bg-zinc-50 p-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      Why this match
+                    </p>
+
+                    {reasons.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {reasons.map((reason) => (
+                          <li
+                            key={reason.code}
+                            className="flex gap-2 text-sm leading-6 text-zinc-700"
+                          >
+                            <span aria-hidden="true" className="text-zinc-400">
+                              ✓
+                            </span>
+                            <span>{reason.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-zinc-500">
+                        No specific overlap found. Ranked on overall score only.
+                      </p>
+                    )}
                   </div>
 
                   {profile.bio && (
