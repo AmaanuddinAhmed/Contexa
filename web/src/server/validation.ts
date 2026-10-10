@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { RECOMMENDATION_MODES } from "@/server/recommendations/modes";
 
 export const registerSchema = z.object({
     email: z.string().email(),
@@ -39,4 +40,35 @@ export const contextSchema = z.object({
             (value) => value === undefined || new Date(value).getTime() > Date.now(),
             { message: "validUntil must be in the future." }
         )
+});
+
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i);
+
+export const connectionRequestSchema = z.object({
+    recipientId: objectId,
+    message: z.string().trim().max(300).optional(),
+    // Set when the request is sent from the recommendations page.
+    source: z
+        .object({
+            mode: z.enum(RECOMMENDATION_MODES),
+            rank: z.number().int().min(1).max(50),
+            score: z.number().min(0).max(1)
+        })
+        .optional()
+});
+
+export const connectionActionSchema = z.object({
+    action: z.enum(["accept", "decline"])
+});
+
+export const feedbackRatingsSchema = z.object({
+    ratings: z
+        .array(
+            z.object({
+                userId: objectId,
+                rating: z.number().int().min(1).max(5)
+            })
+        )
+        .min(1)
+        .max(50)
 });
