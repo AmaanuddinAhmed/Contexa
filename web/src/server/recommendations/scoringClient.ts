@@ -8,7 +8,12 @@ import type { RecommendationMode } from "./modes";
  * service. It receives only the fields the matching engine reads.
  */
 
-const RECOMMENDATION_SERVICE_TIMEOUT_MS = 10_000;
+// A free-tier host can take up to about a minute to wake an idle service,
+// so the deployed app raises this via RECOMMENDATION_SERVICE_TIMEOUT_MS.
+const getRecommendationServiceTimeoutMs = (): number => {
+    const configured = Number(process.env.RECOMMENDATION_SERVICE_TIMEOUT_MS);
+    return Number.isInteger(configured) && configured > 0 ? configured : 10_000;
+};
 
 const getRecommendationServiceUrl = (): string =>
     process.env.RECOMMENDATION_SERVICE_URL ?? "http://localhost:8000";
@@ -75,7 +80,7 @@ export const requestScores = async (
                 method: "POST",
                 headers,
                 body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(RECOMMENDATION_SERVICE_TIMEOUT_MS),
+                signal: AbortSignal.timeout(getRecommendationServiceTimeoutMs()),
                 cache: "no-store"
             }
         );
