@@ -1,3 +1,2 @@
-(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& e:\CONTEXA\recommendation-service\.venv\Scripts\Activate.ps1) 
-
+(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& e:\CONTEXA\recommendation-service\.venv\Scripts\Activate.ps1)
 python -m uvicorn main:app --reload --port 8000

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDatabase } from "@/server/db";
 import { authenticate } from "@/server/auth";
 import { errorResponse, readJsonBody } from "@/server/http";
-import { Context } from "@/server/models/Context";
+import { Context, currentContextFilter } from "@/server/models/Context";
 import { toMatchTerms } from "@/server/recommendations/terms";
 import { contextSchema } from "@/server/validation";
 
@@ -16,9 +16,11 @@ export const GET = async (request: Request) => {
     try {
         await connectDatabase();
 
+        // An expired context is treated as no context, so the user is asked
+        // to set a new one instead of silently getting no recommendations.
         const context = await Context.findOne({
             userId: auth.userId,
-            isActive: true
+            ...currentContextFilter()
         }).sort({ createdAt: -1 });
 
         return NextResponse.json({ success: true, data: { context } });

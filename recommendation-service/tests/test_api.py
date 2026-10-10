@@ -55,6 +55,19 @@ def test_context_aware_ranks_complementary_candidate_first(client):
     assert [r["userId"] for r in data["recommendations"]] == ["b", "c"]
     assert data["recommendations"][0]["score"] == 0.69
 
+def test_recommendations_include_reasons(client):
+    response = client.post("/internal/recommend", json=body())
+    top = response.json()["recommendations"][0]
+    assert top["reasons"][0]["code"] == "THEY_MEET_YOUR_NEEDS"
+    assert top["reasons"][0]["items"] == ["React"]
+    assert all({"code", "text", "items"} <= set(r) for r in top["reasons"])
+
+
+def test_profile_only_reasons_have_no_context_codes(client):
+    response = client.post("/internal/recommend", json=body(mode="PROFILE_ONLY"))
+    for recommendation in response.json()["recommendations"]:
+        assert not {r["code"] for r in recommendation["reasons"]} & {
+            "THEY_MEET_YOUR_NEEDS", "YOU_MEET_THEIR_NEEDS", "SHARED_NEEDS"}
 
 def test_profile_only_ranks_similar_candidate_first(client):
     response = client.post("/internal/recommend", json=body(mode="PROFILE_ONLY"))

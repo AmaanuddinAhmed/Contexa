@@ -31,5 +31,12 @@ export const contextSchema = z.object({
     availability: z.string().min(1).max(100),
     situation: z.string().min(1).max(500),
     interactionPreference: z.string().min(1).max(100),
-    validUntil: z.string().datetime().optional()
+    validUntil: z
+        .string()
+        .datetime()
+        .optional()
+        .refine(
+            (value) => value === undefined || new Date(value).getTime() > Date.now(),
+            { message: "validUntil must be in the future." }
+        )
 });

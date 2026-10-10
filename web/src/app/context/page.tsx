@@ -12,6 +12,7 @@ interface Context {
   availability: string;
   situation: string;
   interactionPreference: string;
+  validUntil?: string;
 }
 
 interface ContextResponse {
@@ -26,6 +27,16 @@ interface ContextResponse {
 const isOnboarding = (): boolean =>
   new URLSearchParams(window.location.search).get("onboarding") === "1";
 
+// <input type="date"> works with local "YYYY-MM-DD" strings.
+const toDateInputValue = (date: Date): string => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+// A context stays valid until the end of the chosen day (local time).
+const endOfDayIso = (dateValue: string): string =>
+  new Date(`${dateValue}T23:59:59`).toISOString();
+
 export default function ContextPage() {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
@@ -35,6 +46,7 @@ export default function ContextPage() {
   const [availability, setAvailability] = useState("");
   const [situation, setSituation] = useState("");
   const [interactionPreference, setInteractionPreference] = useState("");
+  const [validUntil, setValidUntil] = useState("");
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -63,6 +75,11 @@ export default function ContextPage() {
           setAvailability(context.availability);
           setSituation(context.situation);
           setInteractionPreference(context.interactionPreference);
+          setValidUntil(
+            context.validUntil
+              ? toDateInputValue(new Date(context.validUntil))
+              : "",
+          );
         }
       } catch (error) {
         setMessage(
@@ -101,6 +118,8 @@ export default function ContextPage() {
           availability,
           situation,
           interactionPreference,
+          // Omitted when empty: the context then has no expiry.
+          ...(validUntil ? { validUntil: endOfDayIso(validUntil) } : {}),
         }),
       });
 
@@ -217,6 +236,26 @@ export default function ContextPage() {
             <option value="In-person">In-person</option>
             <option value="Either">Either</option>
           </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-medium">
+            Valid until{" "}
+            <span className="font-normal text-gray-500">(optional)</span>
+          </label>
+
+          <input
+            type="date"
+            value={validUntil}
+            min={toDateInputValue(new Date())}
+            onChange={(event) => setValidUntil(event.target.value)}
+            className="w-full rounded border p-3"
+          />
+
+          <p className="mt-1 text-sm text-gray-500">
+            After this day you stop appearing in recommendations until you
+            update your context. Leave empty for no expiry.
+          </p>
         </div>
 
         <button type="submit" className="rounded bg-black px-6 py-3 text-white">

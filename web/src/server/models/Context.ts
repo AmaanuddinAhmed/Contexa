@@ -85,6 +85,16 @@ const contextSchema = new Schema<IContext>(
     }
 );
 
+/**
+ * A context counts as current when it is active AND not expired.
+ * validUntil is optional: a missing (or null) value means "no expiry".
+ * Expired contexts are filtered out at query time, so no cleanup job is needed.
+ */
+export const currentContextFilter = (now: Date = new Date()) => ({
+    isActive: true,
+    $or: [{ validUntil: null }, { validUntil: { $gt: now } }]
+});
+
 // Candidate retrieval: active contexts needing at least one term.
 contextSchema.index({ isActive: 1, needTerms: 1 });
 // Loading the active contexts of a set of candidates.

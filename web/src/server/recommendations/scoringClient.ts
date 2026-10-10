@@ -27,10 +27,18 @@ export const toMatchingContext = (context: IContext) => ({
     interactionPreference: context.interactionPreference
 });
 
+/** One human-readable reason for a match, produced by explain.py. */
+export interface MatchReason {
+    code: string;
+    text: string;
+    items: string[];
+}
+
 export interface ScoredCandidate {
     userId: string;
     score: number;
     breakdown: Record<string, number>;
+    reasons: MatchReason[];
 }
 
 export interface ScoringRequest {

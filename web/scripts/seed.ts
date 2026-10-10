@@ -7,7 +7,7 @@
  *   and their own profiles/contexts. Real accounts are never touched.
  * - Writes retrieval terms for new users and backfills them for everyone.
  *
- * Run from frontend/:  npm run db:seed
+ * Run from web/:  npm run db:seed
  */
 import { faker } from "@faker-js/faker";
 import mongoose from "mongoose";
