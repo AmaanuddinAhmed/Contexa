@@ -13,7 +13,16 @@ The system has two recommendation modes:
 | `PROFILE_ONLY` (baseline)  | Profile similarity only: skills, interests, experience level, collaboration preferences                                                                                                                          |
 | `CONTEXT_AWARE` (proposed) | Profile similarity, current context (needs, activity, availability, interaction preference) and **directional complementarity**: how well each person covers the other's needs, where M(A→B) ≠ M(B→A) in general |
 
-Every recommendation comes with plain-language reasons ("They can help with what you need: React") that correspond exactly to the factors that produced its score.
+Each mode can compare terms (skills, interests, needs) in two ways:
+
+| Matcher    | When two terms match                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EXACT`    | Identical after trimming and lowercasing ("React" = " react ")                                                                             |
+| `SEMANTIC` | Also near-synonyms, by sentence-embedding similarity ≥ 0.65 with all-MiniLM-L6-v2 ("React" ≈ "React.js", "AI" ≈ "Artificial Intelligence") |
+
+That gives four variants to compare: `PROFILE_ONLY`, `CONTEXT_AWARE`, `PROFILE_ONLY:SEMANTIC` and `CONTEXT_AWARE:SEMANTIC`. Only term comparison differs between matchers; weights and every other factor are shared, so `SEMANTIC` never scores a pair lower than `EXACT` and only adds credit for near-synonyms.
+
+Every recommendation comes with plain-language reasons ("They can help with what you need: React", or "React ≈ React.js" for a semantic match) that correspond exactly to the factors that produced its score.
 
 ## Architecture
 
@@ -55,6 +64,7 @@ cd recommendation-service
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
+python download_model.py      # once: the ~90 MB embedding model for SEMANTIC matching
 python -m uvicorn main:app --reload --port 8000
 ```
 
@@ -106,6 +116,7 @@ The recommendation service tests cover:
 - **API contract:** positive and negative cases for `/internal/recommend`.
 - **Explanations:** a reason appears exactly when its factor contributes to the score.
   The web tests cover the connection and messaging rules (who may send, accept, read and message, with positive and negative cases), the feedback pool, and how polled messages are merged.
+- **Semantic matching:** with no synonyms it reproduces `EXACT` exactly, it never scores below `EXACT`, synonyms change rankings, reasons name the matched pair, and a missing model fails fast with a 503 while `EXACT` keeps working. These use a small deterministic stand-in for the model; `tests/test_semantic_model.py` checks the real model and runs only once it is downloaded.
 
 ## Deployment
 
@@ -115,7 +126,7 @@ The recommendation service tests cover:
 | Recommendation service | Render free web service (Root Directory: `recommendation-service`) |
 | Database               | MongoDB Atlas (M0 free cluster)                                    |
 
-On Render, the build command is `pip install -r requirements.txt` and the start command is `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+On Render, the build command is `pip install -r requirements.txt && python download_model.py` and the start command is `uvicorn main:app --host 0.0.0.0 --port $PORT`. The model is downloaded at build time, so the running service never downloads it; if it is missing, `SEMANTIC` requests return 503 and `EXACT` is unaffected. With the model loaded the service uses about 270 MB of memory (free tier: 512 MB).
 
 Render's free tier stops an idle service after 15 minutes and takes about a minute to wake it, which is why the production timeout is 60 seconds.
 
@@ -124,3 +135,5 @@ Render's free tier stops an idle service after 15 minutes and takes about a minu
 - The weights in `matching.py` are a starting point, not a validated optimum.
 - Results from synthetic data describe system behaviour, not real-world relevance.
 - No claim is made that `CONTEXT_AWARE` is better until the evaluation shows it.
+- The 0.65 similarity threshold was chosen by inspecting term pairs, not tuned on evaluation results. The same holds for `SEMANTIC`: no claim that it is better until the evaluation shows it.
+- The synthetic users draw from a fixed list of distinct terms, so they understate what `SEMANTIC` changes; real users typing freely are the meaningful test.

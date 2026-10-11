@@ -3,11 +3,18 @@ import mongoose from "mongoose";
 import { Context, currentContextFilter } from "@/server/models/Context";
 import { FeedbackRound, IFeedbackRound } from "@/server/models/FeedbackRound";
 import { Profile } from "@/server/models/Profile";
-import { RECOMMENDATION_MODES } from "@/server/recommendations/modes";
+import {
+    MATCHERS,
+    RECOMMENDATION_MODES,
+    toVariantId
+} from "@/server/recommendations/modes";
 import { getRecommendations } from "@/server/recommendations/service";
-import { buildPool, checkRatings } from "./pool";
+import { buildPool, checkRatings, VariantList } from "./pool";
 
-/** People taken from each variant's top list. Pool size is K to 2K. */
+/**
+ * People taken from each variant's top list. With four variants the pool is
+ * K to 4K people; in practice the lists overlap heavily (see README).
+ */
 export const FEEDBACK_K = 5;
 
 /** What the rater sees: profiles only. No scores, reasons, ranks or variants. */
@@ -82,13 +89,33 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
         return toView(existing);
     }
 
-    // Same user, same context, same candidate pool; only the variant differs.
-    const lists = await Promise.all(
-        RECOMMENDATION_MODES.map(async (mode) => ({
-            variant: mode,
-            recommendations: (await getRecommendations(userId, FEEDBACK_K, mode)).recommendations
+    // Same user, same context, same candidate pool; only the variant
+    // (mode x matcher) differs.
+    const variants = RECOMMENDATION_MODES.flatMap((mode) =>
+        MATCHERS.map((matcher) => ({ mode, matcher }))
+    );
+
+    const results = await Promise.allSettled(
+        variants.map(async ({ mode, matcher }): Promise<VariantList> => ({
+            variant: toVariantId(mode, matcher),
+            recommendations: (await getRecommendations(userId, FEEDBACK_K, mode, matcher))
+                .recommendations
         }))
     );
+
+    // The EXACT variants are required. SEMANTIC ones are added when the
+    // embedding model is available, so a model problem never blocks rating.
+    const lists: VariantList[] = [];
+
+    results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+            lists.push(result.value);
+        } else if (variants[index].matcher === "EXACT") {
+            throw result.reason;
+        } else {
+            console.error("Semantic variant skipped in feedback round:", result.reason);
+        }
+    });
 
     const pool = buildPool(lists, FEEDBACK_K);
 
@@ -100,7 +127,7 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
         const round = await FeedbackRound.create({
             userId,
             contextId: context._id,
-            matcher: "EXACT",
+            matcher: lists.length > RECOMMENDATION_MODES.length ? "BOTH" : "EXACT",
             k: FEEDBACK_K,
             items: pool.map((item) => ({
                 userId: item.userId,

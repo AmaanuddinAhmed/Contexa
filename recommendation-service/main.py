@@ -1,12 +1,19 @@
 import os
 import secrets
+from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from explain import explain_match
-from matching import Mode, rank_candidates
+from matching import EXACT, Matcher, Mode, TermMatcher, rank_candidates
+from semantic import (
+    FastEmbedEmbedder,
+    SemanticMatcherUnavailable,
+    SemanticTerms,
+    request_vocabulary,
+)
 
 # Upper bound on candidates per request. Candidate generation (retrieval)
 # narrows the pool to at most this many before scoring, so request size and
@@ -18,7 +25,27 @@ MAX_LIMIT = 50
 # Optional shared secret. When set, callers must send it as X-Internal-Key.
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
-app = FastAPI(title="CONTEXA Recommendation Service")
+# Loaded on the first SEMANTIC request and kept for the life of the process.
+# Tests replace it with a deterministic fake.
+EMBEDDER = FastEmbedEmbedder()
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Load the embedding model at startup when it is on disk, so the first
+    # SEMANTIC request does not pay for it. Never fatal: EXACT works without it.
+    if FastEmbedEmbedder.is_installed():
+        try:
+            EMBEDDER.load()
+            print("Semantic matcher ready.")
+        except SemanticMatcherUnavailable as error:
+            print(f"Semantic matcher unavailable: {error}")
+    else:
+        print("Semantic matcher not installed: run `python download_model.py`.")
+
+    yield
+
+
+app = FastAPI(title="CONTEXA Recommendation Service", lifespan=lifespan)
 
 
 class ProfileIn(BaseModel):
@@ -53,6 +80,8 @@ class CandidateIn(BaseModel):
 
 class RecommendRequest(BaseModel):
     mode: Mode
+    # Optional so existing callers keep the original exact matching.
+    matcher: Matcher = "EXACT"
     limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
     requester: RequesterIn
     candidates: list[CandidateIn] = Field(max_length=MAX_CANDIDATES)
@@ -73,6 +102,7 @@ class RecommendationOut(BaseModel):
 
 class RecommendResponse(BaseModel):
     mode: Mode
+    matcher: Matcher
     recommendations: list[RecommendationOut]
     count: int
     limit: int
@@ -120,12 +150,35 @@ def recommend(
         else None
     )
 
+    candidates = [candidate.model_dump() for candidate in request.candidates]
+    terms: TermMatcher = EXACT
+
+    if request.matcher == "SEMANTIC":
+        try:
+            terms = SemanticTerms(
+                EMBEDDER,
+                request_vocabulary(
+                    {"profile": requester_profile, "context": requester_context},
+                    candidates,
+                ),
+            )
+        except SemanticMatcherUnavailable as error:
+            print(f"Semantic matcher unavailable: {error}")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "SEMANTIC_MATCHER_UNAVAILABLE",
+                    "message": "The semantic matcher is not available.",
+                },
+            ) from error
+
     ranked = rank_candidates(
         mode=request.mode,
         requester_profile=requester_profile,
         requester_context=requester_context,
-        candidates=[candidate.model_dump() for candidate in request.candidates],
+        candidates=candidates,
         limit=request.limit,
+        terms=terms,
     )
 
     # Explain only the people actually returned (at most `limit`).
@@ -140,11 +193,13 @@ def recommend(
             candidate.profile.model_dump(),
             requester_context,
             candidate.context.model_dump(),
+            terms,
         )
         recommendations.append({**result, "reasons": reasons})
 
     return RecommendResponse(
         mode=request.mode,
+        matcher=request.matcher,
         recommendations=recommendations,
         count=len(recommendations),
         limit=request.limit,

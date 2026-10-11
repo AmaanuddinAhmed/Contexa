@@ -1,7 +1,12 @@
 import "server-only";
 
 import mongoose, { Document, Schema } from "mongoose";
-import { RECOMMENDATION_MODES, RecommendationMode } from "@/server/recommendations/modes";
+import {
+    Matcher,
+    MATCHERS,
+    RECOMMENDATION_MODES,
+    RecommendationMode
+} from "@/server/recommendations/modes";
 import {
     CONNECTION_STATUSES,
     ConnectionState,
@@ -16,11 +21,14 @@ export interface IConnection extends Document {
     status: ConnectionStatus;
     message?: string;
     /**
-     * Where the request came from, for evaluation: which recommendation mode
-     * showed this person, at what rank and score. Absent if sent elsewhere.
-     */
+ * Where the request came from, for evaluation: which recommendation mode
+ * and matcher showed this person, at what rank and score. Absent if sent
+ * elsewhere. `matcher` is absent on requests from before semantic
+ * matching existed, which were all EXACT.
+ */
     source?: {
         mode: RecommendationMode;
+        matcher?: Matcher;
         rank: number;
         score: number;
     };
@@ -59,6 +67,7 @@ const connectionSchema = new Schema<IConnection>(
             type: new Schema(
                 {
                     mode: { type: String, enum: RECOMMENDATION_MODES, required: true },
+                    matcher: { type: String, enum: MATCHERS },
                     rank: { type: Number, required: true },
                     score: { type: Number, required: true }
                 },
