@@ -1,14 +1,23 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearToken, useIsLoggedIn } from "@/lib/auth";
+import { api } from "@/lib/api";
+import { clearToken, getToken, useIsLoggedIn } from "@/lib/auth";
+import {
+  MESSAGES_READ_EVENT,
+  UNREAD_POLL_MS,
+  UnreadResponse,
+} from "@/lib/messages";
+import { usePolling } from "@/lib/usePolling";
 
 const NAV_LINKS = [
   { href: "/profile", label: "Profile" },
   { href: "/context", label: "Context" },
   { href: "/recommendations", label: "Recommendations" },
   { href: "/connections", label: "Connections" },
+  { href: "/messages", label: "Messages" },
   { href: "/feedback", label: "Rate matches" },
 ];
 
@@ -16,6 +25,37 @@ export default function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isLoggedIn = useIsLoggedIn();
+  const [unreadTotal, setUnreadTotal] = useState(0);
+
+  const refreshUnread = useCallback(async () => {
+    const token = getToken();
+
+    if (!token) {
+      return;
+    }
+
+    try {
+      const response = await api<UnreadResponse>("/messages", { token });
+      setUnreadTotal(response.data.total);
+    } catch {
+      // The badge is a convenience; the next refresh retries.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      return;
+    }
+
+    const onRead = () => void refreshUnread();
+
+    onRead();
+    window.addEventListener(MESSAGES_READ_EVENT, onRead);
+
+    return () => window.removeEventListener(MESSAGES_READ_EVENT, onRead);
+  }, [isLoggedIn, refreshUnread]);
+
+  usePolling(refreshUnread, UNREAD_POLL_MS, isLoggedIn);
 
   const handleLogout = () => {
     clearToken();
@@ -44,6 +84,14 @@ export default function SiteHeader() {
                   }
                 >
                   {link.label}
+                  {link.href === "/messages" && unreadTotal > 0 && (
+                    <span
+                      className="ml-1.5 rounded-full bg-black px-1.5 py-0.5 text-xs font-semibold text-white"
+                      aria-label={`${unreadTotal} unread`}
+                    >
+                      {unreadTotal > 99 ? "99+" : unreadTotal}
+                    </span>
+                  )}
                 </Link>
               );
             })}

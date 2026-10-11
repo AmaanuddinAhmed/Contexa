@@ -24,7 +24,7 @@ Browser
 web/  (Next.js: UI + API routes under /api/v1)
    │  auth (JWT), profiles, contexts, candidate generation (stage 1)
    │
-   ├──► MongoDB  (users, profiles, contexts)
+   ├──► MongoDB  (users, profiles, contexts, connections, feedback rounds, messages)
    │
    └──► recommendation-service/  (Python FastAPI, stateless)
           POST /internal/recommend: scoring, ranking, explanations (stage 2)
@@ -86,18 +86,26 @@ Open http://localhost:3000.
 
 See `web/.env.example` and `recommendation-service/.env.example`.
 
+## Messaging
+
+Two people can message each other once a connection request is accepted (`/messages`). Messages are fetched by polling: an open conversation checks for anything newer every second while people are chatting, slowing to every 2, 5 and finally 10 seconds as it goes quiet, and unread counts refresh every 30 seconds, all only while the tab is visible. Push over WebSockets would remove the delay entirely, but it needs a server that keeps connections open, which Vercel's serverless functions do not. Removing a connection deletes its messages. Each sender is limited to 20 messages a minute.
+
 ## Tests
 
 ```bash
 cd recommendation-service
 python -m pytest -q
+
+cd web
+npm test
 ```
 
-They cover:
+The recommendation service tests cover:
 
 - **Parity:** Python scores and rankings exactly equal the TypeScript golden fixtures.
 - **API contract:** positive and negative cases for `/internal/recommend`.
 - **Explanations:** a reason appears exactly when its factor contributes to the score.
+  The web tests cover the connection and messaging rules (who may send, accept, read and message, with positive and negative cases), the feedback pool, and how polled messages are merged.
 
 ## Deployment
 

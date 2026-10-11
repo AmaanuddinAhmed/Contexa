@@ -5,6 +5,7 @@ import { checkRemove, checkRespond } from "@/server/connections/rules";
 import { connectDatabase } from "@/server/db";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { Connection, toRuleState } from "@/server/models/Connection";
+import { Message } from "@/server/models/Message";
 import { connectionActionSchema } from "@/server/validation";
 
 interface RouteContext {
@@ -109,6 +110,11 @@ export const DELETE = async (request: Request, { params }: RouteContext) => {
 
         if (deleted.deletedCount === 0) {
             return errorResponse(409, "CONNECTION_CHANGED", "Please refresh and try again.");
+        }
+
+        // A conversation exists only while two people are connected.
+        if (connection.status === "accepted") {
+            await Message.deleteMany({ connectionId: connection._id });
         }
 
         return NextResponse.json({ success: true, message: "Connection removed." });
