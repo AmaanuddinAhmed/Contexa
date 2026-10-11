@@ -10,6 +10,10 @@ fixtures.
 
 Reasons are written from the requester's point of view ("you" = the person
 asking for recommendations, "they" = the candidate).
+
+With the SEMANTIC matcher, a match between different terms is shown as
+"Machine Learning ≈ Deep Learning", so the reason still names exactly what
+produced the credit.
 """
 
 from __future__ import annotations
@@ -17,13 +21,14 @@ from __future__ import annotations
 from typing import Optional, TypedDict
 
 from matching import (
+    EXACT,
     EXPERIENCE_LEVELS,
     ContextData,
     Mode,
     ProfileData,
+    TermMatcher,
     _normalize,
     interaction_similarity,
-    text_similarity,
 )
 
 # How many items to name in a reason's text before "+N more".
@@ -55,6 +60,14 @@ def _matched(values: list[str], reference: list[str]) -> list[str]:
     return matched
 
 
+def _matched_by(terms: TermMatcher, values: list[str], reference: list[str]) -> list[str]:
+    """`_matched` for EXACT; the matcher's own version (with ≈ labels) otherwise."""
+    if terms is EXACT:
+        return _matched(values, reference)
+
+    return terms.matched(values, reference)  # type: ignore[attr-defined]
+
+
 def _join(items: list[str]) -> str:
     shown = items[:MAX_ITEMS_IN_TEXT]
     hidden = len(items) - len(shown)
@@ -71,18 +84,20 @@ def _capabilities(profile: ProfileData) -> list[str]:
     return [*profile.get("skills", []), *profile.get("interests", [])]
 
 
-def profile_reasons(first: ProfileData, second: ProfileData) -> list[Reason]:
+def profile_reasons(
+    first: ProfileData, second: ProfileData, terms: TermMatcher = EXACT
+) -> list[Reason]:
     """Reasons behind the profile-similarity score, in weight order."""
     reasons: list[Reason] = []
 
-    shared_skills = _matched(first.get("skills", []), second.get("skills", []))
+    shared_skills = _matched_by(terms, first.get("skills", []), second.get("skills", []))
     if shared_skills:
         reasons.append(_reason(
             "SHARED_SKILLS", f"You share skills: {_join(shared_skills)}", shared_skills
         ))
 
-    shared_interests = _matched(
-        first.get("interests", []), second.get("interests", [])
+    shared_interests = _matched_by(
+        terms, first.get("interests", []), second.get("interests", [])
     )
     if shared_interests:
         reasons.append(_reason(
@@ -107,7 +122,8 @@ def profile_reasons(first: ProfileData, second: ProfileData) -> list[Reason]:
                 levels,
             ))
 
-    shared_collaboration = _matched(
+    shared_collaboration = _matched_by(
+        terms,
         first.get("collaborationPreferences") or [],
         second.get("collaborationPreferences") or [],
     )
@@ -126,12 +142,13 @@ def context_reasons(
     profile_b: ProfileData,
     context_a: ContextData,
     context_b: ContextData,
+    terms: TermMatcher = EXACT,
 ) -> list[Reason]:
     """Reasons behind the CONTEXT_AWARE score, in weight order."""
     reasons: list[Reason] = []
 
     # Complementarity (weight 0.45), both directions.
-    they_cover = _matched(context_a["need"], _capabilities(profile_b))
+    they_cover = _matched_by(terms, context_a["need"], _capabilities(profile_b))
     if they_cover:
         reasons.append(_reason(
             "THEY_MEET_YOUR_NEEDS",
@@ -139,7 +156,7 @@ def context_reasons(
             they_cover,
         ))
 
-    you_cover = _matched(context_b["need"], _capabilities(profile_a))
+    you_cover = _matched_by(terms, context_b["need"], _capabilities(profile_a))
     if you_cover:
         reasons.append(_reason(
             "YOU_MEET_THEIR_NEEDS",
@@ -148,10 +165,10 @@ def context_reasons(
         ))
 
     # Profile similarity (weight 0.30).
-    reasons.extend(profile_reasons(profile_a, profile_b))
+    reasons.extend(profile_reasons(profile_a, profile_b, terms))
 
     # Shared needs (weight 0.10).
-    shared_needs = _matched(context_a["need"], context_b["need"])
+    shared_needs = _matched_by(terms, context_a["need"], context_b["need"])
     if shared_needs:
         reasons.append(_reason(
             "SHARED_NEEDS", f"You're both looking for: {_join(shared_needs)}", shared_needs
@@ -159,7 +176,7 @@ def context_reasons(
 
     # Activity, availability, interaction preference (weight 0.05 each).
     activity_a, activity_b = context_a["activity"], context_b["activity"]
-    if text_similarity(activity_a, activity_b) > 0:
+    if terms.text_similarity(activity_a, activity_b) > 0:
         if _normalize(activity_a) == _normalize(activity_b):
             reasons.append(_reason(
                 "SAME_ACTIVITY", f"You're both: {activity_a.strip()}", [activity_a.strip()]
@@ -173,7 +190,7 @@ def context_reasons(
             ))
 
     availability_a, availability_b = context_a["availability"], context_b["availability"]
-    if text_similarity(availability_a, availability_b) > 0:
+    if terms.text_similarity(availability_a, availability_b) > 0:
         if _normalize(availability_a) == _normalize(availability_b):
             reasons.append(_reason(
                 "SAME_AVAILABILITY",
@@ -213,14 +230,15 @@ def explain_match(
     candidate_profile: ProfileData,
     requester_context: Optional[ContextData],
     candidate_context: ContextData,
+    terms: TermMatcher = EXACT,
 ) -> list[Reason]:
     """Same inputs as matching.score_candidate; returns the reasons only."""
     if mode == "PROFILE_ONLY":
-        return profile_reasons(requester_profile, candidate_profile)
+        return profile_reasons(requester_profile, candidate_profile, terms)
 
     if requester_context is None:
         raise ValueError("ACTIVE_CONTEXT_NOT_FOUND")
 
     return context_reasons(
-        requester_profile, candidate_profile, requester_context, candidate_context
+        requester_profile, candidate_profile, requester_context, candidate_context, terms
     )

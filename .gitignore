@@ -29,4 +29,7 @@ Thumbs.db
 *.log
 
 # Local data
-data/local/
+data/local/ 
+
+# Embedding model downloaded by recommendation-service/download_model.py
+recommendation-service/models/

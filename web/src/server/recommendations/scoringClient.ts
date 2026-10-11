@@ -1,7 +1,7 @@
 import "server-only";
 import { IContext } from "@/server/models/Context";
 import { IProfile } from "@/server/models/Profile";
-import type { RecommendationMode } from "./modes";
+import type { Matcher, RecommendationMode } from "./modes";
 
 /**
  * Stage 2 (scoring + ranking) runs in the stateless Python recommendation
@@ -48,6 +48,7 @@ export interface ScoredCandidate {
 
 export interface ScoringRequest {
     mode: RecommendationMode;
+    matcher: Matcher;
     limit: number;
     requester: {
         profile: ReturnType<typeof toMatchingProfile>;
@@ -90,11 +91,14 @@ export const requestScores = async (
     }
 
     if (!response.ok) {
-        console.error(
-            "Recommendation service error:",
-            response.status,
-            await response.text()
-        );
+        const body = await response.text();
+        console.error("Recommendation service error:", response.status, body);
+
+        // The service is up but its embedding model is not: only SEMANTIC fails.
+        if (response.status === 503 && body.includes("SEMANTIC_MATCHER_UNAVAILABLE")) {
+            throw new Error("SEMANTIC_MATCHER_UNAVAILABLE");
+        }
+
         throw new Error("RECOMMENDATION_SERVICE_UNAVAILABLE");
     }
 

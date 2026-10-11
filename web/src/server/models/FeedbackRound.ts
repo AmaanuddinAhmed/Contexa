@@ -19,8 +19,12 @@ export interface IFeedbackRound extends Document {
     userId: mongoose.Types.ObjectId;
     /** The context the recommendations were generated for. */
     contextId: mongoose.Types.ObjectId;
-    /** Term-matching method in use (semantic matching is added later). */
-    matcher: "EXACT" | "SEMANTIC";
+    /**
+ * Which variants were pooled. EXACT: PROFILE_ONLY and CONTEXT_AWARE with
+ * exact matching (rounds from before semantic matching, or when it was
+ * unavailable). BOTH: those two plus their :SEMANTIC versions.
+ */
+    matcher: "EXACT" | "SEMANTIC" | "BOTH";
     /** How many people were taken from each variant. */
     k: number;
     items: IFeedbackItem[];
@@ -44,7 +48,7 @@ const feedbackRoundSchema = new Schema<IFeedbackRound>(
     {
         userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
         contextId: { type: Schema.Types.ObjectId, ref: "Context", required: true },
-        matcher: { type: String, enum: ["EXACT", "SEMANTIC"], default: "EXACT" },
+        matcher: { type: String, enum: ["EXACT", "SEMANTIC", "BOTH"], default: "EXACT" },
         k: { type: Number, required: true },
         items: { type: [feedbackItemSchema], default: [] },
         status: { type: String, enum: ["open", "completed"], default: "open" },

@@ -3,7 +3,12 @@ import mongoose from "mongoose";
 import { Context, currentContextFilter } from "@/server/models/Context";
 import { Profile } from "@/server/models/Profile";
 import { generateCandidates } from "./candidateGeneration";
-import { DEFAULT_RECOMMENDATION_MODE, RecommendationMode } from "./modes";
+import {
+    DEFAULT_MATCHER,
+    DEFAULT_RECOMMENDATION_MODE,
+    Matcher,
+    RecommendationMode
+} from "./modes";
 import { MatchReason, requestScores, toMatchingContext, toMatchingProfile } from "./scoringClient";
 
 export interface Recommendation {
@@ -25,6 +30,7 @@ export interface Recommendation {
 
 export interface RecommendationResult {
     mode: RecommendationMode;
+    matcher: Matcher;
     recommendations: Recommendation[];
     count: number;
     limit: number;
@@ -44,7 +50,8 @@ const normalizeLimit = (limit?: number): number => {
 export const getRecommendations = async (
     userId: string,
     requestedLimit?: number,
-    mode: RecommendationMode = DEFAULT_RECOMMENDATION_MODE
+    mode: RecommendationMode = DEFAULT_RECOMMENDATION_MODE,
+    matcher: Matcher = DEFAULT_MATCHER
 ): Promise<RecommendationResult> => {
     const limit = normalizeLimit(requestedLimit);
 
@@ -72,9 +79,11 @@ export const getRecommendations = async (
     // Stage 1: retrieval. Note that `mode` is not passed in.
     const { candidates } = await generateCandidates(userObjectId, profile, context);
 
-    // Stage 2: scoring and ranking in the Python service.
+    // Stage 2: scoring and ranking in the Python service. Retrieval above is
+    // the same for every mode and matcher, so variants rank the same pool.
     const scored = await requestScores({
         mode,
+        matcher,
         limit,
         requester: {
             profile: toMatchingProfile(profile),
@@ -115,6 +124,7 @@ export const getRecommendations = async (
 
     return {
         mode,
+        matcher,
         recommendations,
         count: recommendations.length,
         limit

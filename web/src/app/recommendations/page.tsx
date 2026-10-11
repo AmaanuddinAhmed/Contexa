@@ -50,10 +50,32 @@ const MODE_OPTIONS: {
   },
 ];
 
+type Matcher = "EXACT" | "SEMANTIC";
+
+const MATCHER_OPTIONS: {
+  value: Matcher;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "EXACT",
+    label: "Exact terms",
+    description:
+      "Skills, interests and needs match only when written the same way.",
+  },
+  {
+    value: "SEMANTIC",
+    label: "Semantic",
+    description:
+      "Also matches terms with the same meaning, such as React and React.js (shown as ≈).",
+  },
+];
+
 interface RecommendationResponse {
   success: boolean;
   data: {
     mode: RecommendationMode;
+    matcher: Matcher;
     recommendations: Recommendation[];
     count: number;
     limit: number;
@@ -138,6 +160,7 @@ const formatFactorName = (factor: string) => {
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [mode, setMode] = useState<RecommendationMode>("CONTEXT_AWARE");
+  const [matcher, setMatcher] = useState<Matcher>("EXACT");
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -163,9 +186,10 @@ export default function RecommendationsPage() {
 
     try {
       const [response, connections] = await Promise.all([
-        api<RecommendationResponse>(`/recommendations?limit=10&mode=${mode}`, {
-          token,
-        }),
+        api<RecommendationResponse>(
+          `/recommendations?limit=10&mode=${mode}&matcher=${matcher}`,
+          { token },
+        ),
         // Connection states only drive the buttons, so a failure here
         // should not hide the recommendations.
         api<ConnectionsResponse>("/connections", { token }).catch(() => null),
@@ -185,7 +209,7 @@ export default function RecommendationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode]);
+  }, [mode, matcher]);
 
   const sendConnectionRequest = async (
     recommendation: Recommendation,
@@ -206,8 +230,8 @@ export default function RecommendationsPage() {
         token,
         body: JSON.stringify({
           recipientId: recommendation.userId,
-          // Recorded for evaluation: which mode showed this person, and where.
-          source: { mode, rank, score: recommendation.score },
+          // Recorded for evaluation: which variant showed this person, and where.
+          source: { mode, matcher, rank, score: recommendation.score },
         }),
       });
 
@@ -227,6 +251,9 @@ export default function RecommendationsPage() {
 
   const activeMode =
     MODE_OPTIONS.find((option) => option.value === mode) ?? MODE_OPTIONS[0];
+  const activeMatcher =
+    MATCHER_OPTIONS.find((option) => option.value === matcher) ??
+    MATCHER_OPTIONS[0];
 
   useEffect(() => {
     loadRecommendations();
@@ -315,8 +342,30 @@ export default function RecommendationsPage() {
               ))}
             </div>
 
+            <div
+              role="group"
+              aria-label="Term matching"
+              className="mt-3 ml-0 inline-flex rounded-xl border border-zinc-200 bg-white p-1 sm:ml-3"
+            >
+              {MATCHER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={matcher === option.value}
+                  onClick={() => setMatcher(option.value)}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                    matcher === option.value
+                      ? "bg-black text-white"
+                      : "text-zinc-600 hover:text-black"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
             <p className="mt-3 max-w-2xl text-zinc-600">
-              {activeMode.description}
+              {activeMode.description} {activeMatcher.description}
             </p>
           </div>
 

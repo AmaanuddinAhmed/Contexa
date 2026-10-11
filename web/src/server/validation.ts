@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { MESSAGE_MAX_LENGTH } from "@/server/messages/rules";
-import { RECOMMENDATION_MODES } from "@/server/recommendations/modes";
+import { MATCHERS, RECOMMENDATION_MODES } from "@/server/recommendations/modes";
 
 export const registerSchema = z.object({
     email: z.string().email(),
@@ -52,6 +52,8 @@ export const connectionRequestSchema = z.object({
     source: z
         .object({
             mode: z.enum(RECOMMENDATION_MODES),
+            // Optional: requests sent before semantic matching existed omit it.
+            matcher: z.enum(MATCHERS).optional(),
             rank: z.number().int().min(1).max(50),
             score: z.number().min(0).max(1)
         })

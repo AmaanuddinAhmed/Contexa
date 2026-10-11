@@ -4,9 +4,10 @@
  * Pure functions only (no database), so they can be unit tested.
  *
  * Method (pooled, blind, within-subject):
- *  1. Take the top K people from EACH variant (today: PROFILE_ONLY and
- *     CONTEXT_AWARE) for the same user and the same context.
- *  2. Merge them into one pool. Someone in both lists appears once.
+ *  1. Take the top K people from EACH variant (PROFILE_ONLY and
+ *     CONTEXT_AWARE, each with EXACT and SEMANTIC matching) for the same
+ *     user and the same context.
+ *  2. Merge them into one pool. Someone in several lists appears once.
  *  3. Shuffle, and hide scores, reasons and which variant chose whom.
  *  4. The user rates every person in the pool from 1 to 5.
  *
@@ -15,7 +16,7 @@
  * metrics on the same ratings without the rater knowing which was which.
  */
 
-/** Variant id, e.g. "CONTEXT_AWARE". Later also e.g. "CONTEXT_AWARE:SEMANTIC". */
+/** Variant id: "CONTEXT_AWARE", "CONTEXT_AWARE:SEMANTIC", ... (see toVariantId). */
 export type VariantId = string;
 
 export interface VariantList {

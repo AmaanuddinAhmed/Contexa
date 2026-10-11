@@ -122,4 +122,56 @@ def test_internal_key_enforced_when_configured(monkeypatch):
                        headers={"X-Internal-Key": "secret-123"}).status_code == 200
 
     monkeypatch.delenv("INTERNAL_API_KEY")
-    importlib.reload(main)
+    importlib.reload(main) 
+
+# ---------- matcher (EXACT / SEMANTIC) ----------
+
+from conftest import BrokenEmbedder, FakeEmbedder  # noqa: E402
+
+REACT_JS_DEV = {
+    "userId": "d",
+    "profile": {"skills": ["React.js"], "interests": [], "experienceLevel": "Intermediate",
+                "collaborationPreferences": ["Project-based"]},
+    "context": {"need": ["Docker"], "activity": "Building a software project",
+                "availability": "Weekends", "interactionPreference": "Online"},
+}
+
+
+def test_matcher_defaults_to_exact(client):
+    response = client.post("/internal/recommend", json=body())
+    assert response.json()["matcher"] == "EXACT"
+
+
+def test_exact_matcher_ignores_synonyms(client):
+    response = client.post("/internal/recommend",
+                           json=body(matcher="EXACT", candidates=[PYTHON_CLONE, REACT_JS_DEV]))
+    assert [r["userId"] for r in response.json()["recommendations"]] == ["c", "d"]
+
+
+def test_semantic_matcher_credits_synonyms(client, monkeypatch):
+    monkeypatch.setattr(main, "EMBEDDER", FakeEmbedder())
+    response = client.post("/internal/recommend",
+                           json=body(matcher="SEMANTIC", candidates=[PYTHON_CLONE, REACT_JS_DEV]))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["matcher"] == "SEMANTIC"
+    assert [r["userId"] for r in data["recommendations"]] == ["d", "c"]
+    assert data["recommendations"][0]["reasons"][0]["items"] == ["React ≈ React.js"]
+
+
+def test_semantic_matcher_unavailable_returns_503(client, monkeypatch):
+    monkeypatch.setattr(main, "EMBEDDER", BrokenEmbedder())
+    response = client.post("/internal/recommend", json=body(matcher="SEMANTIC"))
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "SEMANTIC_MATCHER_UNAVAILABLE"
+
+
+def test_exact_matcher_works_when_semantic_is_unavailable(client, monkeypatch):
+    monkeypatch.setattr(main, "EMBEDDER", BrokenEmbedder())
+    assert client.post("/internal/recommend", json=body(matcher="EXACT")).status_code == 200
+
+
+def test_unknown_matcher_is_rejected(client):
+    assert client.post("/internal/recommend", json=body(matcher="FUZZY")).status_code == 422
