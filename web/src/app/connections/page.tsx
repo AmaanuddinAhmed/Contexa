@@ -282,22 +282,31 @@ export default function ConnectionsPage() {
           emptyText="No connections yet."
           items={lists.connections}
           renderActions={(item) => (
-            <button
-              type="button"
-              disabled={busyId === item.id}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Remove ${item.user.name} from your connections?`,
-                  )
-                ) {
-                  runAction(item, { method: "DELETE" });
-                }
-              }}
-              className={`${buttonClass} border border-zinc-200 text-zinc-600 hover:bg-zinc-50`}
-            >
-              Remove
-            </button>
+            <>
+              <Link
+                href={`/messages?c=${item.id}`}
+                className={`${buttonClass} bg-black text-white hover:bg-zinc-800`}
+              >
+                Message
+              </Link>
+
+              <button
+                type="button"
+                disabled={busyId === item.id}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Remove ${item.user.name} from your connections? Your messages with them will be deleted.`,
+                    )
+                  ) {
+                    runAction(item, { method: "DELETE" });
+                  }
+                }}
+                className={`${buttonClass} border border-zinc-200 text-zinc-600 hover:bg-zinc-50`}
+              >
+                Remove
+              </button>
+            </>
           )}
         />
       </div>

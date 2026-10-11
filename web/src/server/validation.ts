@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { MESSAGE_MAX_LENGTH } from "@/server/messages/rules";
 import { RECOMMENDATION_MODES } from "@/server/recommendations/modes";
 
 export const registerSchema = z.object({
@@ -72,3 +73,18 @@ export const feedbackRatingsSchema = z.object({
         .min(1)
         .max(50)
 });
+
+export const messageSchema = z.object({
+    body: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH)
+});
+
+// Message timestamps as returned by the API (ISO 8601). `after` polls for
+// newer messages; `before` loads an older page of history.
+export const messageQuerySchema = z
+    .object({
+        after: z.string().datetime().optional(),
+        before: z.string().datetime().optional()
+    })
+    .refine((query) => !(query.after && query.before), {
+        message: "Use either after or before, not both."
+    });
