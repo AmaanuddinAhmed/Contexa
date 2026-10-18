@@ -9,6 +9,8 @@
     "lint": "eslint",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
     "db:backfill-terms": "tsx --conditions=react-server scripts/backfill-terms.ts",
+    "experiment": "tsx --conditions=react-server scripts/run-experiment.ts",
+    "admin:grant": "tsx --conditions=react-server scripts/grant-admin.ts",
     "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {

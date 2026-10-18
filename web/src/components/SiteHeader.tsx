@@ -26,6 +26,37 @@ export default function SiteHeader() {
   const router = useRouter();
   const isLoggedIn = useIsLoggedIn();
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // The Evaluation link is only a convenience: /api/v1/admin/* checks the role itself.
+  useEffect(() => {
+    const token = getToken();
+
+    if (!isLoggedIn || !token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    api<{ data: { user: { role: string } } }>("/auth/me", { token })
+      .then((response) => {
+        if (!cancelled) {
+          setIsAdmin(response.data.user.role === "admin");
+        }
+      })
+      .catch(() => {
+        // Leave the link hidden.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
+
+  const links =
+    isLoggedIn && isAdmin
+      ? [...NAV_LINKS, { href: "/admin", label: "Evaluation" }]
+      : NAV_LINKS;
 
   const refreshUnread = useCallback(async () => {
     const token = getToken();
@@ -71,7 +102,7 @@ export default function SiteHeader() {
 
         <nav className="flex flex-wrap items-center gap-5 text-sm font-medium">
           {isLoggedIn &&
-            NAV_LINKS.map((link) => {
+            links.map((link) => {
               const isActive = pathname === link.href;
 
               return (
