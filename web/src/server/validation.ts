@@ -90,3 +90,12 @@ export const messageQuerySchema = z
     .refine((query) => !(query.after && query.before), {
         message: "Use either after or before, not both."
     });
+
+export const locationSchema = z.object({
+    lat: z.number().finite().min(-90).max(90),
+    lng: z.number().finite().min(-180).max(180)
+});
+
+export const ghostModeSchema = z.object({
+    ghost: z.boolean()
+});
