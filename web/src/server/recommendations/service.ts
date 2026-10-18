@@ -1,7 +1,7 @@
 import "server-only";
 import mongoose from "mongoose";
-import { Context, currentContextFilter } from "@/server/models/Context";
-import { Profile } from "@/server/models/Profile";
+import { Context, currentContextFilter, IContext } from "@/server/models/Context";
+import { IProfile, Profile } from "@/server/models/Profile";
 import { generateCandidates } from "./candidateGeneration";
 import {
     DEFAULT_MATCHER,
@@ -76,6 +76,23 @@ export const getRecommendations = async (
         throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
     }
 
+    return rankForRequester(userObjectId, profile, context, limit, mode, matcher);
+};
+
+/**
+ * Stages 1 and 2 for a requester whose profile and context are given rather
+ * than loaded. getRecommendations uses it with the stored ones; the
+ * experiment runner (scripts/run-experiment.ts) also uses it with a
+ * different context, to hold the profile constant while varying context.
+ */
+export const rankForRequester = async (
+    userObjectId: mongoose.Types.ObjectId,
+    profile: IProfile,
+    context: IContext | null,
+    limit: number,
+    mode: RecommendationMode,
+    matcher: Matcher
+): Promise<RecommendationResult> => {
     // Stage 1: retrieval. Note that `mode` is not passed in.
     const { candidates } = await generateCandidates(userObjectId, profile, context);
 
