@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/recommendations", label: "Recommendations" },
   { href: "/connections", label: "Connections" },
   { href: "/messages", label: "Messages" },
+  { href: "/map", label: "Map" },
   { href: "/feedback", label: "Rate matches" },
 ];
 

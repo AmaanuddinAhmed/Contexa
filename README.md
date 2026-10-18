@@ -33,7 +33,7 @@ Browser
 web/  (Next.js: UI + API routes under /api/v1)
    │  auth (JWT), profiles, contexts, candidate generation (stage 1)
    │
-   ├──► MongoDB  (users, profiles, contexts, connections, feedback rounds, messages, experiments)
+   ├──► MongoDB  (users, profiles, contexts, connections, feedback rounds, messages, experiments, locations)
    │
    └──► recommendation-service/  (Python FastAPI, stateless)
           POST /internal/recommend: scoring, ranking, explanations (stage 2)
@@ -100,6 +100,17 @@ See `web/.env.example` and `recommendation-service/.env.example`.
 
 Two people can message each other once a connection request is accepted (`/messages`). Messages are fetched by polling: an open conversation checks for anything newer every second while people are chatting, slowing to every 2, 5 and finally 10 seconds as it goes quiet, and unread counts refresh every 30 seconds, all only while the tab is visible. Push over WebSockets would remove the delay entirely, but it needs a server that keeps connections open, which Vercel's serverless functions do not. Removing a connection deletes its messages. Each sender is limited to 20 messages a minute.
 
+## Map
+
+`/map` shows roughly where your connections are, to plan meeting in person. Location sharing is opt-in: use your current location or click the map to choose your area.
+
+- Positions are snapped to the centre of a grid cell about 1 km across in the browser, so an exact position is never sent; the server snaps again and stores only the cell centre.
+- Areas are visible only to accepted connections. There is no "nearby strangers" view, so people are still found only through recommendations.
+- **Ghost mode** hides you from everyone's map without deleting your area; you can still see others.
+- An area not updated for 30 days stops being shown; **Stop sharing** deletes it.
+
+The map uses Leaflet with OpenStreetMap tiles (attribution shown on the map).
+
 ## Evaluation
 
 Two kinds of evidence, both shown on the admin dashboard (`/admin`, linked as **Evaluation** in the header for admins):
@@ -135,7 +146,7 @@ The recommendation service tests cover:
 - **Parity:** Python scores and rankings exactly equal the TypeScript golden fixtures.
 - **API contract:** positive and negative cases for `/internal/recommend`.
 - **Explanations:** a reason appears exactly when its factor contributes to the score.
-  The web tests cover the connection and messaging rules (who may send, accept, read and message, with positive and negative cases), the feedback pool, how polled messages are merged, the evaluation metrics (NDCG, precision, bootstrap intervals, verdicts, overlap, rank-biased overlap) and the experiment summary.
+  The web tests cover the connection and messaging rules (who may send, accept, read and message, with positive and negative cases), the feedback pool, how polled messages are merged, the evaluation metrics (NDCG, precision, bootstrap intervals, verdicts, overlap, rank-biased overlap) and the experiment summary, and the location rules (grid snapping, distances, ghost mode and expiry).
 - **Semantic matching:** with no synonyms it reproduces `EXACT` exactly, it never scores below `EXACT`, synonyms change rankings, reasons name the matched pair, and a missing model fails fast with a 503 while `EXACT` keeps working. These use a small deterministic stand-in for the model; `tests/test_semantic_model.py` checks the real model and runs only once it is downloaded.
 
 ## Deployment
