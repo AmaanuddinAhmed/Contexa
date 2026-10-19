@@ -3,7 +3,7 @@ import secrets
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from explain import explain_match
@@ -22,15 +22,51 @@ MAX_CANDIDATES = 500
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 50
 
-# Optional shared secret. When set, callers must send it as X-Internal-Key.
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+# Shared secret; callers must send it as X-Internal-Key. Optional locally
+# (unset or empty = no check), required in production (see below).
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY") or None
+
+# Minimum key length in production: `python -c "import secrets;
+# print(secrets.token_hex(32))"` gives 64 characters.
+MIN_INTERNAL_KEY_LENGTH = 32
+
+
+def is_production() -> bool:
+    """Render sets RENDER=true on its servers; ENVIRONMENT works anywhere."""
+    return (
+        os.getenv("ENVIRONMENT", "").lower() == "production"
+        or os.getenv("RENDER", "").lower() == "true"
+    )
+
+
+IS_PRODUCTION = is_production()
+
+
+def check_security_config(internal_key: Optional[str], production: bool) -> None:
+    """
+    Fail closed: in production the service refuses to start without a strong
+    key, instead of silently accepting unauthenticated requests.
+    """
+    if not production:
+        return
+
+    if internal_key is None:
+        raise RuntimeError("INTERNAL_API_KEY must be set in production.")
+
+    if len(internal_key) < MIN_INTERNAL_KEY_LENGTH:
+        raise RuntimeError(
+            f"INTERNAL_API_KEY must be at least {MIN_INTERNAL_KEY_LENGTH} characters "
+            "in production."
+        )
 
 # Loaded on the first SEMANTIC request and kept for the life of the process.
 # Tests replace it with a deterministic fake.
 EMBEDDER = FastEmbedEmbedder()
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI): 
+    check_security_config(INTERNAL_API_KEY, IS_PRODUCTION) 
+
     # Load the embedding model at startup when it is on disk, so the first
     # SEMANTIC request does not pay for it. Never fatal: EXACT works without it.
     if FastEmbedEmbedder.is_installed():
@@ -45,7 +81,15 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="CONTEXA Recommendation Service", lifespan=lifespan)
+# The interactive API docs are for local development; in production they
+# would publish the internal API's shape to anyone.
+app = FastAPI(
+    title="CONTEXA Recommendation Service",
+    lifespan=lifespan,
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
+)
 
 
 class ProfileIn(BaseModel):
@@ -116,7 +160,16 @@ def _check_internal_key(provided: Optional[str]) -> None:
         raise HTTPException(
             status_code=401,
             detail={"code": "UNAUTHORIZED", "message": "Invalid internal key."},
-        )
+        ) 
+
+def require_internal_key(
+    x_internal_key: Annotated[Optional[str], Header()] = None,
+) -> None:
+    """
+    Route dependency: runs before the request body is validated, so a caller
+    without the key gets 401, not a validation error describing the API.
+    """
+    _check_internal_key(x_internal_key)
 
 
 @app.get("/health")
@@ -127,12 +180,12 @@ def health_check():
     }
 
 
-@app.post("/internal/recommend", response_model=RecommendResponse)
-def recommend(
-    request: RecommendRequest,
-    x_internal_key: Annotated[Optional[str], Header()] = None,
-) -> RecommendResponse:
-    _check_internal_key(x_internal_key)
+@app.post(
+    "/internal/recommend",
+    response_model=RecommendResponse,
+    dependencies=[Depends(require_internal_key)],
+)
+def recommend(request: RecommendRequest) -> RecommendResponse:
 
     if request.mode == "CONTEXT_AWARE" and request.requester.context is None:
         raise HTTPException(

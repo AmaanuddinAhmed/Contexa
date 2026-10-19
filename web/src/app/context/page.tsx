@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -53,7 +54,7 @@ export default function ContextPage() {
 
   useEffect(() => {
     const loadContext = async () => {
-      const token = localStorage.getItem("contexa_token");
+      const token = getToken();
 
       if (!token) {
         setMessage("Please log in first.");
@@ -97,7 +98,7 @@ export default function ContextPage() {
     event.preventDefault();
     setSaved(false);
 
-    const token = localStorage.getItem("contexa_token");
+    const token = getToken();
 
     if (!token) {
       setMessage("Please log in first.");

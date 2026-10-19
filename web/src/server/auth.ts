@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { errorResponse } from "./http";
+import { extractToken, SESSION_COOKIE, sessionCookieOptions } from "./session";
 
 const getJwtSecret = (): string => {
     const secret = process.env.JWT_SECRET;
@@ -39,16 +40,16 @@ export const comparePassword = (
 export const authenticate = (
     request: Request
 ): { userId: string } | { response: NextResponse } => {
-    const authorization = request.headers.get("authorization");
+    const token = extractToken(request.headers);
 
-    if (!authorization?.startsWith("Bearer ")) {
+    if (!token) {
         return {
             response: errorResponse(401, "UNAUTHORIZED", "Authentication required.")
         };
     }
 
     try {
-        const payload = verifyToken(authorization.substring(7));
+        const payload = verifyToken(token);
         return { userId: payload.userId };
     } catch {
         return {
@@ -59,4 +60,19 @@ export const authenticate = (
             )
         };
     }
+};
+
+
+const isProduction = (): boolean => process.env.NODE_ENV === "production";
+
+/** Puts a new login token in the httpOnly session cookie. */
+export const setSessionCookie = (response: NextResponse, userId: string): NextResponse => {
+    response.cookies.set(SESSION_COOKIE, generateToken(userId), sessionCookieOptions(isProduction()));
+    return response;
+};
+
+/** Deletes the session cookie (same attributes, expired). */
+export const clearSessionCookie = (response: NextResponse): NextResponse => {
+    response.cookies.set(SESSION_COOKIE, "", sessionCookieOptions(isProduction(), 0));
+    return response;
 };

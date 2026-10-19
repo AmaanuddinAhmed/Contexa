@@ -14,7 +14,6 @@ interface RegisterResponse {
       email: string;
       role: string;
     };
-    token: string;
   };
 }
 
@@ -57,7 +56,7 @@ export default function RegisterPage() {
         }),
       });
 
-      setToken(response.data.token);
+      setToken();
 
       // A new account has no profile or context yet, so start onboarding at /profile.
       router.push("/profile?onboarding=1");

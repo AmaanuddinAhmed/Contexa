@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api"; 
+import { getToken } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -56,7 +57,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const token = localStorage.getItem("contexa_token");
+      const token = getToken();
 
       if (!token) {
         setMessage("Please log in first.");
@@ -93,7 +94,7 @@ export default function ProfilePage() {
     event.preventDefault();
     setSaved(false);
 
-    const token = localStorage.getItem("contexa_token");
+    const token = getToken();
 
     if (!token) {
       setMessage("Please log in first.");
