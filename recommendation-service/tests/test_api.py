@@ -124,6 +124,78 @@ def test_internal_key_enforced_when_configured(monkeypatch):
     monkeypatch.delenv("INTERNAL_API_KEY")
     importlib.reload(main) 
 
+# ---------- production key requirement (fail closed) ----------
+
+STRONG_KEY = "k" * 64
+
+
+def test_production_refuses_missing_key():
+    with pytest.raises(RuntimeError, match="must be set"):
+        main.check_security_config(None, production=True)
+
+
+def test_production_refuses_short_key():
+    with pytest.raises(RuntimeError, match="at least 32"):
+        main.check_security_config("short-key", production=True)
+
+
+def test_production_accepts_strong_key():
+    main.check_security_config(STRONG_KEY, production=True)
+
+
+def test_development_allows_no_key():
+    main.check_security_config(None, production=False)
+
+
+def test_empty_key_is_treated_as_unset(monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    importlib.reload(main)
+
+    assert main.INTERNAL_API_KEY is None
+    assert TestClient(main.app).post("/internal/recommend", json=body()).status_code == 200
+
+    monkeypatch.delenv("INTERNAL_API_KEY")
+    importlib.reload(main)
+
+
+def test_render_without_key_does_not_start(monkeypatch):
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    importlib.reload(main)
+
+    with pytest.raises(RuntimeError, match="must be set"):
+        with TestClient(main.app):  # entering runs the startup (lifespan)
+            pass
+
+    monkeypatch.delenv("RENDER")
+    importlib.reload(main)
+
+
+def test_production_hides_docs_and_requires_key(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("INTERNAL_API_KEY", STRONG_KEY)
+    importlib.reload(main)
+
+    with TestClient(main.app) as client:
+        assert client.get("/health").status_code == 200
+        assert client.get("/docs").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
+        assert client.post("/internal/recommend", json=body()).status_code == 401
+        assert client.post("/internal/recommend", json=body(),
+                           headers={"X-Internal-Key": STRONG_KEY}).status_code == 200
+        # Key checked before the body: no validation details without the key.
+        assert client.post("/internal/recommend", json={}).status_code == 401
+
+    monkeypatch.delenv("ENVIRONMENT")
+    monkeypatch.delenv("INTERNAL_API_KEY")
+    importlib.reload(main)
+
+
+def test_development_keeps_docs(client):
+    assert client.get("/docs").status_code == 200
+
 # ---------- matcher (EXACT / SEMANTIC) ----------
 
 from conftest import BrokenEmbedder, FakeEmbedder  # noqa: E402

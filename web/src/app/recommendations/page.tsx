@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api"; 
+import { getToken } from "@/lib/auth";
 import Link from "next/link";
 import {
   ConnectionState,
@@ -173,7 +174,7 @@ export default function RecommendationsPage() {
   );
 
   const loadRecommendations = useCallback(async () => {
-    const token = localStorage.getItem("contexa_token");
+    const token = getToken();
 
     if (!token) {
       setMessage("Please log in first.");
@@ -215,7 +216,7 @@ export default function RecommendationsPage() {
     recommendation: Recommendation,
     rank: number,
   ) => {
-    const token = localStorage.getItem("contexa_token");
+    const token = getToken();
 
     if (!token) {
       return;

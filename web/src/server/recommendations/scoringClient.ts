@@ -68,8 +68,15 @@ export const requestScores = async (
         "Content-Type": "application/json"
     };
 
-    if (process.env.INTERNAL_API_KEY) {
-        headers["X-Internal-Key"] = process.env.INTERNAL_API_KEY;
+    const internalKey = process.env.INTERNAL_API_KEY;
+
+    if (internalKey) {
+        headers["X-Internal-Key"] = internalKey;
+    } else if (process.env.NODE_ENV === "production") {
+        // Fail closed: never call the scoring service without the key in
+        // production (the service would refuse it anyway).
+        console.error("INTERNAL_API_KEY is not set; refusing to call the recommendation service.");
+        throw new Error("RECOMMENDATION_SERVICE_UNAVAILABLE");
     }
 
     let response: Response;

@@ -14,7 +14,6 @@ interface LoginResponse {
       email: string;
       role: string;
     };
-    token: string;
   };
 }
 
@@ -31,7 +30,8 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await api<LoginResponse>("/auth/login", {
+      // The server sets the httpOnly session cookie on success.
+      await api<LoginResponse>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
           email,
@@ -39,7 +39,7 @@ export default function LoginPage() {
         }),
       });
 
-      setToken(response.data.token);
+      setToken();
 
       // Return to the page that sent the user here, if any.
       const next = safeNextPath(

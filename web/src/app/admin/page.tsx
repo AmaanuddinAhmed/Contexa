@@ -360,8 +360,9 @@ export default function AdminPage() {
     setExportError("");
 
     try {
+      // The session cookie authenticates the download.
       const response = await fetch("/api/v1/admin/export", {
-        headers: { Authorization: `Bearer ${getToken() ?? ""}` },
+        credentials: "same-origin",
       });
 
       if (!response.ok) {

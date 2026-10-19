@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectDatabase } from "@/server/db";
-import { generateToken, hashPassword } from "@/server/auth";
+import { hashPassword, setSessionCookie } from "@/server/auth";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { User } from "@/server/models/User";
-import { registerSchema } from "@/server/validation";
+import { registerSchema } from "@/server/validation"; 
+import { clientIp, POLICIES } from "@/server/rateLimit/rules";
+import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 
 export const POST = async (request: Request) => {
     try {
@@ -17,6 +19,11 @@ export const POST = async (request: Request) => {
 
         await connectDatabase();
 
+        const ipLimit = await consumeRateLimit(POLICIES.registerIp, clientIp(request.headers));
+        if (!ipLimit.allowed) {
+            return tooManyRequests(ipLimit.retryAfterSeconds, "sign-up attempts");
+        }
+
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
@@ -29,17 +36,17 @@ export const POST = async (request: Request) => {
 
         const passwordHash = await hashPassword(password);
         const user = await User.create({ email, passwordHash });
-        const token = generateToken(user.id);
-
-        return NextResponse.json(
-            {
-                success: true,
-                data: {
-                    user: { id: user.id, email: user.email, role: user.role },
-                    token
-                }
-            },
-            { status: 201 }
+        return setSessionCookie(
+            NextResponse.json(
+                {
+                    success: true,
+                    data: {
+                        user: { id: user.id, email: user.email, role: user.role }
+                    }
+                },
+                { status: 201 }
+            ),
+            user.id
         );
     } catch (error) {
         console.error("Registration error:", error);

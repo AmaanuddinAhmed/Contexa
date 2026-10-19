@@ -4,6 +4,11 @@ import { clearToken } from "@/lib/auth";
 const API_BASE_URL = "/api/v1";
 
 interface ApiOptions extends RequestInit {
+    /**
+     * The logged-in flag from getToken(). The session cookie is what
+     * authenticates; this only tells api() that a 401 means "session
+     * expired" (log out) rather than "wrong password" on the login page.
+     */
     token?: string;
 }
 
@@ -15,13 +20,10 @@ export const api = async <T>(
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...fetchOptions,
+        // Sends the httpOnly session cookie (same site only).
+        credentials: "same-origin",
         headers: {
             "Content-Type": "application/json",
-            ...(token
-                ? {
-                    Authorization: `Bearer ${token}`
-                }
-                : {}),
             ...headers
         }
     });
