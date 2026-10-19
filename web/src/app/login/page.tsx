@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { safeNextPath, setToken } from "@/lib/auth";
+import AuthShell from "@/components/AuthShell";
 
 interface LoginResponse {
   success: boolean;
@@ -53,45 +54,65 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
-        <h1 className="text-3xl font-bold">CONTEXA Login</h1>
+    <AuthShell
+      title="Welcome back"
+      lede="Log in to see who matches what you’re working on."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="field"
+            required
+          />
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded border p-3"
-          required
-        />
+        <div>
+          <label htmlFor="password" className="label">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="field"
+            required
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded border p-3"
-          required
-        />
+        {message && (
+          <p role="alert" className="alert-error">
+            {message}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-black p-3 text-white disabled:opacity-60"
+          className="btn btn-primary w-full py-3 text-[0.95rem]"
         >
-          {isSubmitting ? "Logging in..." : "Login"}
+          {isSubmitting ? "Logging in" : "Log in"}
         </button>
 
-        {message && <p>{message}</p>}
-
-        <p className="text-sm text-zinc-600">
-          New to CONTEXA?{" "}
-          <Link href="/register" className="font-medium text-black underline">
+        <p className="text-center text-sm text-muted">
+          New to Contexa?{" "}
+          <Link
+            href="/register"
+            className="font-semibold text-brand underline-offset-4 hover:underline"
+          >
             Create an account
           </Link>
         </p>
       </form>
-    </main>
+    </AuthShell>
   );
 }

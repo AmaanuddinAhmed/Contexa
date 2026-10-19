@@ -126,12 +126,12 @@ function Section({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="mb-12">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <section className="mt-14 first:mt-0">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">{title}</h2>
+          <h2 className="text-2xl font-semibold">{title}</h2>
           {description && (
-            <p className="mt-1 max-w-3xl text-sm text-zinc-600">
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-muted">
               {description}
             </p>
           )}
@@ -154,35 +154,35 @@ function Table({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500">
+      <p className="rounded-[1.5rem] border border-dashed border-line-strong px-5 py-6 text-sm text-muted">
         {empty}
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-[1.5rem] bg-surface shadow-[var(--shadow-lift)] ring-1 ring-line/70">
       <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wider text-zinc-500">
+        <thead className="border-b border-line bg-sunk text-xs text-muted">
           <tr>
             {headers.map((header) => (
               <th
                 key={header.label}
                 scope="col"
-                className={`px-4 py-3 font-semibold ${header.align === "right" ? "text-right" : ""}`}
+                className={`px-4 py-3 font-medium ${header.align === "right" ? "text-right" : ""}`}
               >
                 {header.label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-100">
+        <tbody className="divide-y divide-line/70">
           {rows.map((cells, rowIndex) => (
-            <tr key={rowIndex}>
+            <tr key={rowIndex} className="transition-colors hover:bg-sunk/60">
               {cells.map((cell, cellIndex) => (
                 <td
                   key={cellIndex}
-                  className={`px-4 py-3 text-zinc-800 ${
+                  className={`px-4 py-3.5 text-ink-soft ${
                     headers[cellIndex]?.align === "right"
                       ? "text-right tabular-nums"
                       : ""
@@ -203,10 +203,10 @@ function Table({
 function Meter({ value, label }: { value: number | null; label: string }) {
   return (
     <div className="flex items-center justify-end gap-3" title={label}>
-      <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100 sm:block">
+      <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-line/70 sm:block">
         {isNumber(value) && (
           <div
-            className="h-full rounded-full bg-zinc-900"
+            className="h-full origin-left rounded-full bg-brand [animation:bar-fill_0.9s_var(--ease-out-quint)_both]"
             style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
           />
         )}
@@ -240,7 +240,15 @@ function Verdict({
   }[comparison.verdict];
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
+        comparison.verdict === "INSUFFICIENT_DATA"
+          ? "bg-sunk text-muted ring-1 ring-line"
+          : comparison.verdict === "NO_CLEAR_DIFFERENCE"
+            ? "bg-surface text-ink-soft ring-1 ring-line-strong"
+            : "bg-brand-soft text-brand-ink"
+      }`}
+    >
       <span aria-hidden="true">{icon}</span>
       {text}
     </span>
@@ -257,7 +265,7 @@ function ExperimentDetails({ run }: { run: ExperimentRun }) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-zinc-900">
+        <h3 className="mb-2.5 font-sans text-sm font-semibold tracking-normal text-ink-soft">
           How much the variants agree (top {run.params.k})
         </h3>
         <Table
@@ -278,7 +286,7 @@ function ExperimentDetails({ run }: { run: ExperimentRun }) {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-zinc-900">
+        <h3 className="mb-2.5 font-sans text-sm font-semibold tracking-normal text-ink-soft">
           Response to context (same profile, another user&apos;s context)
         </h3>
         <Table
@@ -297,7 +305,7 @@ function ExperimentDetails({ run }: { run: ExperimentRun }) {
       </div>
 
       {run.notes.length > 0 && (
-        <ul className="list-disc space-y-1 pl-5 text-xs text-zinc-500">
+        <ul className="list-disc space-y-1 pl-5 text-xs leading-5 text-muted">
           {run.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -386,13 +394,14 @@ export default function AdminPage() {
 
   if (state.status === "loading") {
     return (
-      <main className="flex-1 bg-zinc-50 p-6">
-        <div className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-4">
+      <main className="page">
+        <div className="skeleton h-12 w-64" />
+        <div
+          className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4"
+          aria-busy="true"
+        >
           {Array.from({ length: 8 }, (_, index) => (
-            <div
-              key={index}
-              className="h-24 animate-pulse rounded-2xl bg-white shadow-sm"
-            />
+            <div key={index} className="skeleton h-28 rounded-[1.5rem]" />
           ))}
         </div>
       </main>
@@ -401,13 +410,13 @@ export default function AdminPage() {
 
   if (state.status === "error") {
     return (
-      <main className="flex flex-1 items-center justify-center bg-zinc-50 p-6">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold text-zinc-900">
+      <main className="page flex items-center justify-center">
+        <section className="panel w-full max-w-md animate-rise text-center">
+          <h1 className="font-display text-2xl font-semibold">
             Dashboard unavailable
           </h1>
-          <p className="mt-3 text-zinc-600">{state.message}</p>
-        </div>
+          <p className="mt-3 text-muted">{state.message}</p>
+        </section>
       </main>
     );
   }
@@ -417,28 +426,27 @@ export default function AdminPage() {
   const latest = experiments.find((run) => run.status === "completed");
 
   return (
-    <main className="flex-1 bg-zinc-50">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <h1 className="text-4xl font-bold tracking-tight text-zinc-950">
-          Evaluation
-        </h1>
-        <p className="mt-3 mb-10 max-w-3xl text-zinc-600">
+    <main className="page">
+      <div>
+        <h1 className="page-title">Evaluation</h1>
+        <p className="page-lede">
           Does adding context make people recommendations more relevant? Real
           evidence comes from blind ratings; synthetic experiments show how the
           system behaves.
         </p>
 
         <Section title="Overview">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {OVERVIEW_TILES.map((tile) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {OVERVIEW_TILES.map((tile, index) => (
               <div
                 key={tile.key}
-                className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+                style={{ animationDelay: `${index * 40}ms` }}
+                className="animate-rise rounded-[1.5rem] bg-surface p-5 shadow-[var(--shadow-lift)] ring-1 ring-line/70"
               >
-                <p className="text-3xl font-bold tabular-nums text-zinc-950">
+                <p className="font-display text-4xl font-semibold tabular-nums">
                   {dashboard.overview[tile.key] ?? 0}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">{tile.label}</p>
+                <p className="mt-1 text-sm text-muted">{tile.label}</p>
               </div>
             ))}
           </div>
@@ -462,12 +470,12 @@ export default function AdminPage() {
                 type="button"
                 onClick={downloadCsv}
                 disabled={exporting || dashboard.overview.roundsCompleted === 0}
-                className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50"
+                className="btn btn-quiet"
               >
                 {exporting ? "Exporting…" : "Export ratings (CSV)"}
               </button>
               {exportError && (
-                <p role="alert" className="mt-1 text-xs text-red-600">
+                <p role="alert" className="mt-1 text-xs text-danger">
                   {exportError}
                 </p>
               )}
@@ -564,7 +572,7 @@ export default function AdminPage() {
               Every synthetic user ranked under all four variants, with their
               own context and with another user&apos;s. Run from the{" "}
               <code>web</code> folder with{" "}
-              <code className="rounded bg-zinc-100 px-1">
+              <code className="rounded-md bg-sunk px-1.5 py-0.5 text-ink ring-1 ring-line">
                 npm run experiment
               </code>
               .
@@ -572,12 +580,10 @@ export default function AdminPage() {
           }
         >
           {latest ? (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <p className="mb-6 text-sm text-zinc-600">
-                <span className="font-semibold text-zinc-900">
-                  {latest.name}
-                </span>{" "}
-                · {latest.summary?.requesters ?? 0} requesters · K ={" "}
+            <div className="panel">
+              <p className="mb-6 text-sm text-muted">
+                <span className="font-semibold text-ink">{latest.name}</span> ·{" "}
+                {latest.summary?.requesters ?? 0} requesters · K ={" "}
                 {latest.params.k} · seed {latest.params.seed} ·{" "}
                 {new Date(
                   latest.completedAt ?? latest.startedAt,
@@ -595,7 +601,7 @@ export default function AdminPage() {
 
           {experiments.length > 1 && (
             <div className="mt-6">
-              <h3 className="mb-2 text-sm font-semibold text-zinc-900">
+              <h3 className="mb-2.5 font-sans text-sm font-semibold tracking-normal text-ink-soft">
                 All runs
               </h3>
               <Table

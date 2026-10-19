@@ -27,6 +27,7 @@ import {
   UnreadResponse,
 } from "@/lib/messages";
 import { useAdaptivePolling, usePolling } from "@/lib/usePolling";
+import Avatar from "@/components/Avatar";
 
 const errorText = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
@@ -46,14 +47,6 @@ const formatDay = (value: string) =>
 
 const isSameDay = (first: string, second: string) =>
   new Date(first).toDateString() === new Date(second).toDateString();
-
-function Avatar({ name }: { name: string }) {
-  return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 font-bold text-white">
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
 
 function Thread({
   connection,
@@ -234,22 +227,37 @@ function Thread({
 
   return (
     <section className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3">
+      <header className="flex items-center gap-3 border-b border-line px-3 py-3 sm:px-5">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-sunk hover:text-ink md:hidden"
           aria-label="Back to conversations"
         >
-          ←
+          <svg
+            viewBox="0 0 16 16"
+            className="h-4 w-4"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M10 3.5L5.5 8l4.5 4.5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
 
-        <Avatar name={user.name} />
+        <Avatar name={user.name} size="sm" />
 
         <div className="min-w-0">
-          <p className="truncate font-semibold text-zinc-950">{user.name}</p>
-          <p className="truncate text-xs text-zinc-500">
-            {[user.role, user.education].filter(Boolean).join(" · ") ||
+          <p className="truncate font-display text-lg leading-tight font-semibold">
+            {user.name}
+          </p>
+          <p className="truncate text-xs text-muted">
+            {[user.role, user.education].filter(Boolean).join(", ") ||
               "Connected"}
           </p>
         </div>
@@ -262,10 +270,18 @@ function Thread({
           stickToBottom.current =
             list.scrollHeight - list.scrollTop - list.clientHeight < 80;
         }}
-        className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-zinc-50 px-4 py-4"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto bg-sunk/60 px-3 py-4 sm:px-5"
       >
         {loading ? (
-          <p className="py-10 text-center text-sm text-zinc-500">Loading…</p>
+          <div
+            className="space-y-3 py-4"
+            aria-busy="true"
+            aria-label="Loading messages"
+          >
+            <div className="skeleton h-10 w-2/3 rounded-2xl" />
+            <div className="skeleton ml-auto h-10 w-1/2 rounded-2xl" />
+            <div className="skeleton h-10 w-3/5 rounded-2xl" />
+          </div>
         ) : (
           <>
             {hasMore && (
@@ -274,48 +290,58 @@ function Thread({
                   type="button"
                   onClick={loadOlder}
                   disabled={loadingOlder}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+                  className="btn btn-quiet px-3.5 py-1.5 text-xs"
                 >
-                  {loadingOlder ? "Loading…" : "Load older messages"}
+                  {loadingOlder ? "Loading" : "Load older messages"}
                 </button>
               </div>
             )}
 
             {messages.length === 0 && !error && (
-              <p className="py-10 text-center text-sm text-zinc-500">
-                No messages yet. Say hello to {user.name}.
-              </p>
+              <div className="flex flex-col items-center py-14 text-center">
+                <Avatar name={user.name} size="lg" />
+                <p className="mt-4 font-display text-xl font-semibold">
+                  You and {user.name} are connected
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  Say hello and mention what you’d like to work on.
+                </p>
+              </div>
             )}
 
             {messages.map((message, index) => {
               const previous = messages[index - 1];
               const newDay =
                 !previous || !isSameDay(previous.createdAt, message.createdAt);
+              const grouped =
+                !newDay && previous && previous.mine === message.mine;
 
               return (
-                <div key={message.id}>
+                <div key={message.id} className={grouped ? "" : "pt-1.5"}>
                   {newDay && (
-                    <p className="py-2 text-center text-xs font-medium text-zinc-400">
-                      {formatDay(message.createdAt)}
+                    <p className="py-3 text-center">
+                      <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
+                        {formatDay(message.createdAt)}
+                      </span>
                     </p>
                   )}
 
                   <div
-                    className={`flex ${message.mine ? "justify-end" : "justify-start"}`}
+                    className={`flex animate-fade ${message.mine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
+                      className={`max-w-[85%] rounded-[1.25rem] px-4 py-2.5 sm:max-w-[70%] ${
                         message.mine
-                          ? "rounded-br-sm bg-zinc-900 text-white"
-                          : "rounded-bl-sm border border-zinc-200 bg-white text-zinc-900"
+                          ? "rounded-br-md bg-brand text-white"
+                          : "rounded-bl-md bg-surface text-ink shadow-[var(--shadow-lift)] ring-1 ring-line/60"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words text-sm">
+                      <p className="text-[0.95rem] leading-6 break-words whitespace-pre-wrap">
                         {message.body}
                       </p>
                       <p
-                        className={`mt-1 text-right text-[11px] ${
-                          message.mine ? "text-zinc-400" : "text-zinc-500"
+                        className={`mt-0.5 text-right text-[11px] tabular-nums ${
+                          message.mine ? "text-white/70" : "text-faint"
                         }`}
                       >
                         {formatTime(message.createdAt)}
@@ -332,7 +358,7 @@ function Thread({
       {error && (
         <p
           role="alert"
-          className="border-t border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+          className="border-t border-danger/20 bg-danger-soft px-4 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -340,7 +366,7 @@ function Thread({
 
       <form
         onSubmit={send}
-        className="flex items-end gap-2 border-t border-zinc-200 bg-white p-3"
+        className="flex items-end gap-2 border-t border-line bg-surface p-2.5 sm:p-3"
       >
         <label htmlFor="message-draft" className="sr-only">
           Message {user.name}
@@ -354,16 +380,30 @@ function Thread({
           }}
           onKeyDown={handleKeyDown}
           maxLength={MESSAGE_MAX_LENGTH}
-          rows={2}
+          rows={1}
           placeholder={`Message ${user.name}`}
-          className="min-h-0 flex-1 resize-none rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+          className="field max-h-40 min-h-12 flex-1 resize-none [field-sizing:content]"
         />
         <button
           type="submit"
           disabled={sending || !draft.trim()}
-          className="rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
+          aria-label={sending ? "Sending" : "Send"}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-[0_6px_18px_-8px_rgb(51_82_255/0.7)] transition-all duration-300 ease-[var(--ease-spring)] hover:bg-brand-deep active:scale-95 disabled:bg-line-strong disabled:shadow-none"
         >
-          {sending ? "Sending…" : "Send"}
+          <svg
+            viewBox="0 0 16 16"
+            className={`h-4 w-4 transition-transform duration-300 ${sending ? "translate-x-0.5 -translate-y-0.5" : ""}`}
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M2.5 8h10M8.5 3.5L13 8l-4.5 4.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
       </form>
     </section>
@@ -434,110 +474,121 @@ function MessagesView() {
     });
 
   return (
-    <main className="flex-1 bg-zinc-50">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <h1 className="mb-6 text-4xl font-bold tracking-tight text-zinc-950">
-          Messages
-        </h1>
+    <main className="page pb-6 sm:pb-10">
+      <h1 className={`page-title mb-6 ${selected ? "hidden md:block" : ""}`}>
+        Messages
+      </h1>
 
-        {error && (
-          <p
-            role="alert"
-            className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-          >
-            {error}
-          </p>
-        )}
+      {error && (
+        <p role="alert" className="alert-error mb-6">
+          {error}
+        </p>
+      )}
 
-        <div className="grid h-[70vh] min-h-[420px] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm md:grid-cols-[280px_1fr]">
-          <aside
-            className={`min-h-0 overflow-y-auto border-zinc-200 md:block md:border-r ${
-              selected ? "hidden" : "block"
-            }`}
-          >
-            {loading ? (
-              <div className="space-y-2 p-3">
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="h-14 animate-pulse rounded-xl bg-zinc-100"
-                  />
-                ))}
-              </div>
-            ) : connections.length === 0 ? (
-              <p className="p-6 text-sm text-zinc-500">
-                You can message people once they accept your connection request.
-                Find people on the{" "}
-                <Link href="/recommendations" className="font-medium underline">
-                  Recommendations
-                </Link>{" "}
-                page.
+      <div className="grid h-[calc(100dvh-8.5rem)] min-h-[440px] overflow-hidden rounded-[1.75rem] bg-surface shadow-[var(--shadow-lift)] ring-1 ring-line/70 md:h-[72vh] md:grid-cols-[300px_1fr]">
+        <aside
+          className={`min-h-0 overflow-y-auto border-line md:block md:border-r ${
+            selected ? "hidden" : "block"
+          }`}
+          aria-label="Conversations"
+        >
+          {loading ? (
+            <div className="space-y-2 p-3" aria-busy="true">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="skeleton h-16 rounded-2xl" />
+              ))}
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="p-6">
+              <p className="font-display text-lg font-semibold">
+                No conversations yet
               </p>
-            ) : (
-              <ul className="p-2">
-                {connections.map((item) => {
-                  const count = unread[item.id] ?? 0;
-                  const isActive = item.id === selectedId;
+              <p className="mt-2 text-sm leading-6 text-muted">
+                You can message people once they accept your connection request.
+              </p>
+              <Link href="/recommendations" className="btn btn-primary mt-4">
+                Find people to connect with
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-0.5 p-2">
+              {connections.map((item) => {
+                const count = unread[item.id] ?? 0;
+                const isActive = item.id === selectedId;
 
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => open(item.id)}
-                        aria-current={isActive ? "true" : undefined}
-                        className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
-                          isActive ? "bg-zinc-100" : "hover:bg-zinc-50"
-                        }`}
-                      >
-                        <Avatar name={item.user.name} />
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => open(item.id)}
+                      aria-current={isActive ? "true" : undefined}
+                      className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors duration-200 ${
+                        isActive ? "bg-brand-soft" : "hover:bg-sunk"
+                      }`}
+                    >
+                      <Avatar name={item.user.name} size="sm" />
 
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={`block truncate text-sm ${
-                              count > 0
-                                ? "font-bold text-zinc-950"
-                                : "font-medium text-zinc-900"
-                            }`}
-                          >
-                            {item.user.name}
-                          </span>
-                          <span className="block truncate text-xs text-zinc-500">
-                            {item.user.role || "Connected"}
-                          </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block truncate text-[0.95rem] ${
+                            count > 0
+                              ? "font-bold text-ink"
+                              : "font-medium text-ink-soft"
+                          }`}
+                        >
+                          {item.user.name}
                         </span>
+                        <span className="block truncate text-xs text-muted">
+                          {item.user.role || "Connected"}
+                        </span>
+                      </span>
 
-                        {count > 0 && (
-                          <span
-                            className="rounded-full bg-black px-2 py-0.5 text-xs font-semibold text-white"
-                            aria-label={`${count} unread`}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </aside>
+                      {count > 0 && (
+                        <span
+                          className="inline-flex min-w-6 items-center justify-center rounded-full bg-signal px-1.5 text-xs leading-6 font-bold text-ink tabular-nums"
+                          aria-label={`${count} unread`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </aside>
 
-          <div className={`min-h-0 md:block ${selected ? "block" : "hidden"}`}>
-            {selected ? (
-              // Keyed so each conversation starts with fresh state.
-              <Thread
-                key={selected.id}
-                connection={selected}
-                onBack={() => open(null)}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center p-6 text-center text-sm text-zinc-500">
+        <div className={`min-h-0 md:block ${selected ? "block" : "hidden"}`}>
+          {selected ? (
+            // Keyed so each conversation starts with fresh state.
+            <Thread
+              key={selected.id}
+              connection={selected}
+              onBack={() => open(null)}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <span
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sunk text-faint ring-1 ring-line"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
+                  <path
+                    d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <p className="text-sm text-muted">
                 {!loading && selectedId
                   ? "This conversation is no longer available."
                   : "Choose a conversation."}
-              </div>
-            )}
-          </div>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </main>

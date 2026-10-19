@@ -1,10 +1,21 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { api } from "@/lib/api"; 
-import { getToken } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { getToken } from "@/lib/auth";
+import Avatar from "@/components/Avatar";
+import Segmented from "@/components/Segmented";
+import OnboardingSteps from "@/components/OnboardingSteps";
+import {
+  FormSection,
+  FormSkeleton,
+  PillChoice,
+  TermsField,
+  splitTerms,
+  useOnboarding,
+} from "@/components/FormBits";
 
 interface Profile {
   name: string;
@@ -38,16 +49,22 @@ const emptyProfile: Profile = {
 };
 
 // Must match the levels the matching engine recognises exactly.
-const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const EXPERIENCE_LEVELS = [
+  { value: "Beginner", label: "Beginner" },
+  { value: "Intermediate", label: "Intermediate" },
+  { value: "Advanced", label: "Advanced" },
+] as const;
 
-// Set by the register page (?onboarding=1) so new users move through
-// profile -> context -> recommendations without hunting for the next page.
-const isOnboarding = (): boolean =>
-  new URLSearchParams(window.location.search).get("onboarding") === "1";
+const VISIBILITY_OPTIONS = [
+  { value: "public" as const, label: "Public" },
+  { value: "private" as const, label: "Private" },
+];
 
 export default function ProfilePage() {
   const router = useRouter();
+  const onboarding = useOnboarding();
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
@@ -93,6 +110,7 @@ export default function ProfilePage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaved(false);
+    setMessage("");
 
     const token = getToken();
 
@@ -101,197 +119,277 @@ export default function ProfilePage() {
       return;
     }
 
+    setSaving(true);
+
     try {
       const response = await api<ProfileResponse>("/profile", {
         method: "PUT",
         token,
         body: JSON.stringify({
           ...profile,
-          skills: skills
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-          interests: interests
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-          collaborationPreferences: preferences
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
+          skills: splitTerms(skills),
+          interests: splitTerms(interests),
+          collaborationPreferences: splitTerms(preferences),
         }),
       });
 
-      if (isOnboarding()) {
+      if (onboarding) {
         router.push("/context?onboarding=1");
         return;
       }
 
       setProfile(response.data.profile ?? emptyProfile);
-      setMessage("Profile saved.");
       setSaved(true);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to save profile.",
       );
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <main className="mx-auto w-full max-w-2xl p-8">Loading profile...</main>
-    );
-  }
+  const update = (changes: Partial<Profile>) => {
+    setSaved(false);
+    setProfile((current) => ({ ...current, ...changes }));
+  };
+
+  const previewSkills = splitTerms(skills);
+  const previewInterests = splitTerms(interests);
+  const subtitle = [profile.role, profile.education].filter(Boolean).join(", ");
 
   return (
-    <main className="mx-auto w-full max-w-2xl p-8">
-      <h1 className="mb-6 text-3xl font-bold">My Profile</h1>
+    <main className="page">
+      {onboarding && <OnboardingSteps current={1} />}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="mb-1 block font-medium">Name</label>
-          <input
-            value={profile.name}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                name: event.target.value,
-              })
-            }
-            className="w-full rounded border p-3"
-            required
-          />
-        </div>
+      <header>
+        <h1 className="page-title">Your profile</h1>
+        <p className="page-lede">
+          Who you are and what you bring. Both matching modes use this; keep it
+          specific so the reasons on your matches are specific too.
+        </p>
+      </header>
 
-        <div>
-          <label className="mb-1 block font-medium">Bio</label>
-          <textarea
-            value={profile.bio}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                bio: event.target.value,
-              })
-            }
-            className="w-full rounded border p-3"
-            rows={4}
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block font-medium">Education</label>
-          <input
-            value={profile.education}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                education: event.target.value,
-              })
-            }
-            className="w-full rounded border p-3"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block font-medium">Role</label>
-          <input
-            value={profile.role}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                role: event.target.value,
-              })
-            }
-            className="w-full rounded border p-3"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block font-medium">Experience Level</label>
-          <select
-            value={profile.experienceLevel ?? ""}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                experienceLevel: event.target.value,
-              })
-            }
-            className="w-full rounded border p-3"
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1fr_340px] lg:gap-8">
+        {loading ? (
+          <FormSkeleton />
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="panel grid animate-rise gap-7 sm:p-9"
           >
-            <option value="">Select one</option>
-            {EXPERIENCE_LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
-        </div>
+            <FormSection title="About you">
+              <div>
+                <label htmlFor="name" className="label">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  value={profile.name}
+                  onChange={(event) => update({ name: event.target.value })}
+                  className="field"
+                  autoComplete="name"
+                  required
+                />
+              </div>
 
-        <div>
-          <label className="mb-1 block font-medium">Skills</label>
-          <input
-            value={skills}
-            onChange={(event) => setSkills(event.target.value)}
-            className="w-full rounded border p-3"
-            placeholder="Python, Java, MongoDB"
-          />
-        </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="role" className="label">
+                    Role
+                  </label>
+                  <input
+                    id="role"
+                    value={profile.role}
+                    onChange={(event) => update({ role: event.target.value })}
+                    className="field"
+                    placeholder="Frontend developer"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="education" className="label">
+                    Education
+                  </label>
+                  <input
+                    id="education"
+                    value={profile.education}
+                    onChange={(event) =>
+                      update({ education: event.target.value })
+                    }
+                    className="field"
+                    placeholder="MCA, PES University"
+                  />
+                </div>
+              </div>
 
-        <div>
-          <label className="mb-1 block font-medium">Interests</label>
-          <input
-            value={interests}
-            onChange={(event) => setInterests(event.target.value)}
-            className="w-full rounded border p-3"
-            placeholder="AI, Web Development, Cloud"
-          />
-        </div>
+              <PillChoice
+                name="experience"
+                label="Experience level"
+                options={EXPERIENCE_LEVELS}
+                value={profile.experienceLevel ?? ""}
+                onChange={(experienceLevel) => update({ experienceLevel })}
+              />
 
-        <div>
-          <label className="mb-1 block font-medium">
-            Collaboration Preferences
-          </label>
-          <input
-            value={preferences}
-            onChange={(event) => setPreferences(event.target.value)}
-            className="w-full rounded border p-3"
-            placeholder="Online, Project-based"
-          />
-        </div>
+              <div>
+                <label htmlFor="bio" className="label">
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  value={profile.bio}
+                  onChange={(event) => update({ bio: event.target.value })}
+                  className="field min-h-28 resize-y"
+                  rows={4}
+                  placeholder="What you’re building, what you enjoy working on."
+                />
+              </div>
+            </FormSection>
 
-        <div>
-          <label className="mb-1 block font-medium">Visibility</label>
+            <FormSection
+              title="What you bring"
+              description="Skills are what others can come to you for. Matching compares these terms with other people’s skills and needs."
+            >
+              <TermsField
+                id="skills"
+                label="Skills"
+                value={skills}
+                onChange={(value) => {
+                  setSaved(false);
+                  setSkills(value);
+                }}
+                placeholder="Python, Java, MongoDB"
+              />
+              <TermsField
+                id="interests"
+                label="Interests"
+                value={interests}
+                onChange={(value) => {
+                  setSaved(false);
+                  setInterests(value);
+                }}
+                placeholder="AI, Web development, Cloud"
+                tone="plain"
+              />
+              <TermsField
+                id="preferences"
+                label="Collaboration preferences"
+                value={preferences}
+                onChange={(value) => {
+                  setSaved(false);
+                  setPreferences(value);
+                }}
+                placeholder="Online, Project-based"
+                tone="plain"
+              />
+            </FormSection>
 
-          <select
-            value={profile.visibility}
-            onChange={(event) =>
-              setProfile({
-                ...profile,
-                visibility: event.target.value as "public" | "private",
-              })
-            }
-            className="w-full rounded border p-3"
-          >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
+            <FormSection
+              title="Visibility"
+              description={
+                profile.visibility === "public"
+                  ? "Public: you can appear in other people’s matches."
+                  : "Private: you won’t appear in anyone’s matches, but you can still see yours."
+              }
+            >
+              <div>
+                <Segmented
+                  label="Profile visibility"
+                  options={VISIBILITY_OPTIONS}
+                  value={profile.visibility}
+                  onChange={(visibility) => update({ visibility })}
+                />
+              </div>
+            </FormSection>
 
-        <button type="submit" className="rounded bg-black px-6 py-3 text-white">
-          Save Profile
-        </button>
-
-        {message && (
-          <p className="text-sm">
-            {message}{" "}
-            {saved && (
-              <Link href="/context" className="font-medium underline">
-                Update your context
-              </Link>
-            )}
-          </p>
+            <div className="grid gap-3 border-t border-line pt-7">
+              {message && (
+                <p role="alert" className="alert-error">
+                  {message}
+                </p>
+              )}
+              {saved && (
+                <p role="status" className="alert-ok animate-fade">
+                  Profile saved.{" "}
+                  <Link href="/context" className="font-semibold underline">
+                    Update your context
+                  </Link>
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn btn-primary w-full py-3 sm:w-fit sm:px-7"
+              >
+                {saving
+                  ? "Saving"
+                  : onboarding
+                    ? "Save and continue"
+                    : "Save profile"}
+              </button>
+            </div>
+          </form>
         )}
-      </form>
+
+        <aside
+          className="hidden lg:sticky lg:top-24 lg:block"
+          aria-label="Preview of your card"
+        >
+          <p className="mb-3 text-sm font-medium text-muted">
+            How others see you
+          </p>
+          <div className="rounded-[1.75rem] bg-surface p-6 shadow-[var(--shadow-float)] ring-1 ring-line/70">
+            <div className="flex items-start gap-4">
+              <Avatar name={profile.name || "You"} />
+              <div className="min-w-0">
+                <p className="font-display text-xl leading-tight font-semibold break-words">
+                  {profile.name || "Your name"}
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {subtitle || "Role and education"}
+                </p>
+              </div>
+            </div>
+            {profile.bio && (
+              <p className="mt-4 line-clamp-4 text-sm leading-6 text-muted">
+                {profile.bio}
+              </p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {previewSkills.length > 0 ? (
+                previewSkills.map((skill, index) => (
+                  <span key={`${skill}-${index}`} className="chip">
+                    {skill}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-faint">
+                  Your skills appear here
+                </span>
+              )}
+            </div>
+            {previewInterests.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {previewInterests.map((interest, index) => (
+                  <span key={`${interest}-${index}`} className="chip-outline">
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="mt-5 flex items-center gap-2 border-t border-line pt-4 text-xs text-muted">
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full ${
+                  profile.visibility === "public" ? "bg-ok" : "bg-faint"
+                }`}
+              />
+              {profile.visibility === "public"
+                ? "Visible in matches"
+                : "Hidden from matches"}
+            </p>
+          </div>
+        </aside>
+      </div>
     </main>
   );
 }

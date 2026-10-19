@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -11,16 +11,36 @@ import {
   UnreadResponse,
 } from "@/lib/messages";
 import { usePolling } from "@/lib/usePolling";
+import Logo from "@/components/Logo";
 
 const NAV_LINKS = [
-  { href: "/profile", label: "Profile" },
+  { href: "/recommendations", label: "Matches" },
   { href: "/context", label: "Context" },
-  { href: "/recommendations", label: "Recommendations" },
+  { href: "/profile", label: "Profile" },
   { href: "/connections", label: "Connections" },
   { href: "/messages", label: "Messages" },
   { href: "/map", label: "Map" },
   { href: "/feedback", label: "Rate matches" },
 ];
+
+function UnreadBadge({
+  count,
+  className = "",
+}: {
+  count: number;
+  className?: string;
+}) {
+  if (count <= 0) return null;
+
+  return (
+    <span
+      className={`inline-flex min-w-5 items-center justify-center rounded-full bg-signal px-1.5 text-[0.7rem] leading-5 font-bold text-ink tabular-nums ${className}`}
+      aria-label={`${count} unread`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 export default function SiteHeader() {
   const pathname = usePathname();
@@ -28,6 +48,9 @@ export default function SiteHeader() {
   const isLoggedIn = useIsLoggedIn();
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   // The Evaluation link is only a convenience: /api/v1/admin/* checks the role itself.
   useEffect(() => {
@@ -89,69 +112,214 @@ export default function SiteHeader() {
 
   usePolling(refreshUnread, UNREAD_POLL_MS, isLoggedIn);
 
+  // While the mobile menu is open: lock page scroll, close on Escape,
+  // and move focus into the menu.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    menuRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // The menu only exists below the lg breakpoint; close it if the window grows.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const query = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => query.matches && setMenuOpen(false);
+    query.addEventListener("change", onChange);
+
+    return () => query.removeEventListener("change", onChange);
+  }, [menuOpen]);
+
   const handleLogout = () => {
+    setMenuOpen(false);
     clearToken();
     router.push("/login");
   };
 
-  return (
-    <header className="border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-        <Link href="/" className="text-xl font-bold tracking-tight">
-          CONTEXA
-        </Link>
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
-        <nav className="flex flex-wrap items-center gap-5 text-sm font-medium">
-          {isLoggedIn &&
-            links.map((link) => {
-              const isActive = pathname === link.href;
+  return (
+    <>
+      <header className="sticky top-0 z-50 px-3 pt-3 sm:px-5">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 rounded-full bg-surface/85 pr-2 pl-4 shadow-[var(--shadow-lift)] ring-1 ring-line/80 backdrop-blur-xl">
+          <Link
+            href="/"
+            onClick={() => setMenuOpen(false)}
+            className="flex shrink-0 items-center gap-2 rounded-full"
+            aria-label="Contexa home"
+          >
+            <Logo className="h-7 w-7" />
+            <span className="font-display text-lg font-semibold tracking-tight">
+              Contexa
+            </span>
+          </Link>
+
+          {isLoggedIn && (
+            <nav
+              aria-label="Main"
+              className="hidden items-center gap-0.5 lg:flex"
+            >
+              {links.map((link) => {
+                const active = isActive(link.href);
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-200 ${
+                      active
+                        ? "bg-ink text-white"
+                        : "text-muted hover:bg-sunk hover:text-ink"
+                    }`}
+                  >
+                    {link.label}
+                    {link.href === "/messages" && (
+                      <UnreadBadge count={unreadTotal} />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            {isLoggedIn ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn btn-quiet hidden lg:inline-flex"
+                >
+                  Log out
+                </button>
+
+                <button
+                  ref={toggleRef}
+                  type="button"
+                  onClick={() => setMenuOpen((open) => !open)}
+                  aria-expanded={menuOpen}
+                  aria-controls="mobile-menu"
+                  aria-label={menuOpen ? "Close menu" : "Open menu"}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white transition-transform duration-300 ease-[var(--ease-spring)] active:scale-95 lg:hidden"
+                >
+                  <span
+                    className="relative block h-3.5 w-[18px]"
+                    aria-hidden="true"
+                  >
+                    <span
+                      className={`absolute left-0 h-[2px] w-full rounded-full bg-current transition-all duration-500 ease-[var(--ease-spring)] ${
+                        menuOpen
+                          ? "top-1/2 -translate-y-1/2 rotate-45"
+                          : "top-0"
+                      }`}
+                    />
+                    <span
+                      className={`absolute top-1/2 left-0 h-[2px] w-full -translate-y-1/2 rounded-full bg-current transition-all duration-300 ${
+                        menuOpen ? "scale-x-0 opacity-0" : ""
+                      }`}
+                    />
+                    <span
+                      className={`absolute left-0 h-[2px] rounded-full bg-current transition-all duration-500 ease-[var(--ease-spring)] ${
+                        menuOpen
+                          ? "top-1/2 w-full -translate-y-1/2 -rotate-45"
+                          : "bottom-0 w-2/3"
+                      }`}
+                    />
+                  </span>
+                  {!menuOpen && unreadTotal > 0 && (
+                    <span
+                      className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-signal ring-2 ring-ink"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+                >
+                  Log in
+                </Link>
+                <Link href="/register" className="btn btn-primary">
+                  Create account
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {isLoggedIn && menuOpen && (
+        <div
+          id="mobile-menu"
+          ref={menuRef}
+          className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-fog/95 px-6 pt-24 pb-10 backdrop-blur-2xl animate-fade lg:hidden"
+        >
+          <nav aria-label="Main" className="flex flex-col">
+            {links.map((link, index) => {
+              const active = isActive(link.href);
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={
-                    isActive ? "text-black" : "text-zinc-500 hover:text-black"
-                  }
+                  onClick={() => setMenuOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  style={{ animationDelay: `${60 + index * 45}ms` }}
+                  className={`group flex animate-rise items-center justify-between border-b border-line py-3.5 font-display text-[1.75rem] leading-tight font-semibold tracking-tight transition-colors ${
+                    active ? "text-brand" : "text-ink hover:text-brand"
+                  }`}
                 >
-                  {link.label}
-                  {link.href === "/messages" && unreadTotal > 0 && (
-                    <span
-                      className="ml-1.5 rounded-full bg-black px-1.5 py-0.5 text-xs font-semibold text-white"
-                      aria-label={`${unreadTotal} unread`}
-                    >
-                      {unreadTotal > 99 ? "99+" : unreadTotal}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-3">
+                    {link.label}
+                    {link.href === "/messages" && (
+                      <UnreadBadge count={unreadTotal} className="font-sans" />
+                    )}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                      active
+                        ? "bg-brand"
+                        : "bg-line-strong group-hover:bg-brand"
+                    }`}
+                  />
                 </Link>
               );
             })}
+          </nav>
 
-          {isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-zinc-900 hover:bg-zinc-50"
-            >
-              Log out
-            </button>
-          ) : (
-            <>
-              <Link href="/login" className="text-zinc-500 hover:text-black">
-                Log in
-              </Link>
-
-              <Link
-                href="/register"
-                className="rounded-lg bg-black px-4 py-2 text-white hover:bg-zinc-800"
-              >
-                Create account
-              </Link>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{ animationDelay: `${80 + links.length * 45}ms` }}
+            className="btn btn-quiet mt-8 animate-rise self-start"
+          >
+            Log out
+          </button>
+        </div>
+      )}
+    </>
   );
 }
