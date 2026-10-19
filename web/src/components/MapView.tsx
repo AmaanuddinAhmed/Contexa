@@ -111,22 +111,24 @@ export default function MapView({ me, people, picking, onPick }: MapViewProps) {
           center={[person.lat, person.lng]}
           radius={AREA_RADIUS_M}
           pathOptions={{
-            color: "#18181b",
+            color: "#3352ff",
             weight: 2,
-            fillColor: "#18181b",
-            fillOpacity: 0.25,
+            fillColor: "#3352ff",
+            fillOpacity: 0.22,
           }}
         >
           <Tooltip direction="top">{person.name}</Tooltip>
           <Popup>
-            <p className="m-0 font-semibold">{person.name}</p>
-            {person.role && <p className="m-0 text-zinc-500">{person.role}</p>}
+            <p className="m-0 font-display text-base font-semibold">
+              {person.name}
+            </p>
+            {person.role && <p className="m-0 text-muted">{person.role}</p>}
             {person.distanceKm !== null && (
               <p className="m-0 mt-1">{describeDistance(person.distanceKm)}</p>
             )}
             <Link
               href={`/messages?c=${person.connectionId}`}
-              className="mt-2 inline-block font-medium"
+              className="mt-2 inline-block font-semibold !text-brand"
             >
               Message
             </Link>
@@ -140,7 +142,7 @@ export default function MapView({ me, people, picking, onPick }: MapViewProps) {
             center={[me.lat, me.lng]}
             radius={AREA_RADIUS_M}
             pathOptions={{
-              color: me.ghost ? "#a1a1aa" : "#18181b",
+              color: me.ghost ? "#8d91a8" : "#121530",
               weight: 2,
               dashArray: "6 6",
               fillOpacity: 0.05,
@@ -152,7 +154,7 @@ export default function MapView({ me, people, picking, onPick }: MapViewProps) {
             pathOptions={{
               color: "#ffffff",
               weight: 2,
-              fillColor: me.ghost ? "#a1a1aa" : "#18181b",
+              fillColor: me.ghost ? "#8d91a8" : "#121530",
               fillOpacity: 1,
             }}
           >

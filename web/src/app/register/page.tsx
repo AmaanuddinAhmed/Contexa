@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import AuthShell from "@/components/AuthShell";
 
 interface RegisterResponse {
   success: boolean;
@@ -27,13 +28,15 @@ export default function RegisterPage() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const passwordLongEnough = password.length >= MIN_PASSWORD_LENGTH;
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
 
     // Client-side checks mirror the backend registerSchema (min 8 chars),
     // so the user gets a specific message instead of "Invalid registration data."
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    if (!passwordLongEnough) {
       setMessage(
         `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
       );
@@ -48,7 +51,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await api<RegisterResponse>("/auth/register", {
+      await api<RegisterResponse>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           email,
@@ -69,54 +72,95 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
-        <h1 className="text-3xl font-bold">Create a CONTEXA account</h1>
+    <AuthShell
+      title="Create your account"
+      lede="Next you’ll set up your profile and say what you need right now."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="field"
+            required
+          />
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded border p-3"
-          required
-        />
+        <div>
+          <label htmlFor="password" className="label">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            aria-describedby="password-hint"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="field"
+            required
+          />
+          <p
+            id="password-hint"
+            className={`hint flex items-center gap-1.5 transition-colors ${
+              passwordLongEnough ? "text-ok" : ""
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                passwordLongEnough ? "bg-ok" : "bg-line-strong"
+              }`}
+            />
+            At least {MIN_PASSWORD_LENGTH} characters
+          </p>
+        </div>
 
-        <input
-          type="password"
-          placeholder={`Password (at least ${MIN_PASSWORD_LENGTH} characters)`}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded border p-3"
-          required
-        />
+        <div>
+          <label htmlFor="confirm-password" className="label">
+            Confirm password
+          </label>
+          <input
+            id="confirm-password"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="field"
+            required
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Confirm password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          className="w-full rounded border p-3"
-          required
-        />
+        {message && (
+          <p role="alert" className="alert-error">
+            {message}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-black p-3 text-white disabled:opacity-60"
+          className="btn btn-primary w-full py-3 text-[0.95rem]"
         >
-          {isSubmitting ? "Creating account..." : "Create account"}
+          {isSubmitting ? "Creating account" : "Create account"}
         </button>
 
-        {message && <p>{message}</p>}
-
-        <p className="text-sm text-zinc-600">
+        <p className="text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-black underline">
+          <Link
+            href="/login"
+            className="font-semibold text-brand underline-offset-4 hover:underline"
+          >
             Log in
           </Link>
         </p>
       </form>
-    </main>
+    </AuthShell>
   );
 }

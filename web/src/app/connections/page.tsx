@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import type { ConnectionItem, ConnectionsResponse } from "@/lib/connections";
+import Avatar from "@/components/Avatar";
 
 type Lists = ConnectionsResponse["data"];
 
@@ -36,31 +37,35 @@ const formatDate = (value: string) =>
     month: "short",
   });
 
-function PersonSummary({ item }: { item: ConnectionItem }) {
+function PersonSummary({
+  item,
+  compact,
+}: {
+  item: ConnectionItem;
+  compact?: boolean;
+}) {
   const { user } = item;
+  const details = [user.role, user.education].filter(Boolean).join(", ");
 
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 font-bold text-white">
-        {user.name.charAt(0).toUpperCase()}
-      </div>
+    <div className="flex min-w-0 items-start gap-3.5">
+      <Avatar name={user.name} size={compact ? "sm" : "md"} />
 
-      <div className="min-w-0">
-        <p className="font-semibold text-zinc-950">{user.name}</p>
-
-        <p className="text-sm text-zinc-500">
-          {[user.role, user.education, user.experienceLevel]
-            .filter(Boolean)
-            .join(" · ") || "No details yet"}
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-lg leading-tight font-semibold">
+          {user.name}
+        </p>
+        <p className="mt-0.5 text-sm text-muted">
+          {details || "No details yet"}
+          {user.experienceLevel && (
+            <span className="text-faint"> ({user.experienceLevel})</span>
+          )}
         </p>
 
-        {user.skills.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        {!compact && user.skills.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {user.skills.slice(0, 5).map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-700"
-              >
+              <span key={skill} className="chip">
                 {skill}
               </span>
             ))}
@@ -68,8 +73,8 @@ function PersonSummary({ item }: { item: ConnectionItem }) {
         )}
 
         {item.message && (
-          <p className="mt-2 border-l-2 border-zinc-200 pl-3 text-sm italic text-zinc-600">
-            “{item.message}”
+          <p className="mt-3 rounded-2xl rounded-tl-md bg-sunk px-3.5 py-2.5 text-sm leading-6 text-ink-soft">
+            {item.message}
           </p>
         )}
       </div>
@@ -77,47 +82,34 @@ function PersonSummary({ item }: { item: ConnectionItem }) {
   );
 }
 
-function Section({
+function SectionHeading({
   title,
-  emptyText,
-  items,
-  renderActions,
+  count,
+  highlight,
 }: {
   title: string;
-  emptyText: string;
-  items: ConnectionItem[];
-  renderActions: (item: ConnectionItem) => React.ReactNode;
+  count: number;
+  highlight?: boolean;
 }) {
   return (
-    <section className="mb-10">
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900">
-        {title}{" "}
-        <span className="text-sm font-normal text-zinc-500">
-          ({items.length})
-        </span>
-      </h2>
+    <h2 className="mb-4 flex items-center gap-2.5 text-xl font-semibold">
+      {title}
+      <span
+        className={`inline-flex min-w-6 items-center justify-center rounded-full px-2 font-sans text-xs leading-6 font-bold tabular-nums ${
+          highlight && count > 0 ? "bg-signal text-ink" : "bg-sunk text-muted"
+        }`}
+      >
+        {count}
+      </span>
+    </h2>
+  );
+}
 
-      {items.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500">
-          {emptyText}
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center"
-            >
-              <PersonSummary item={item} />
-
-              <div className="flex shrink-0 items-center gap-2">
-                {renderActions(item)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-[1.5rem] border border-dashed border-line-strong px-5 py-6 text-sm leading-6 text-muted">
+      {children}
+    </p>
   );
 }
 
@@ -127,6 +119,8 @@ export default function ConnectionsPage() {
   const [message, setMessage] = useState("");
   // Id of the record an action is running on, to disable its buttons.
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Connection waiting for a second click on "Remove".
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   // `actionError` (from a failed accept/decline/remove) takes priority over
   // the result of the reload that follows it.
@@ -157,6 +151,7 @@ export default function ConnectionsPage() {
     request: { method: "PATCH" | "DELETE"; body?: object },
   ) => {
     setBusyId(item.id);
+    setConfirmingId(null);
     let actionError = "";
 
     try {
@@ -175,141 +170,208 @@ export default function ConnectionsPage() {
     setBusyId(null);
   };
 
-  const buttonClass =
-    "rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50";
-
-  if (loading) {
-    return (
-      <main className="flex-1 bg-zinc-50 p-6">
-        <div className="mx-auto max-w-3xl space-y-3">
-          {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              className="h-24 animate-pulse rounded-2xl bg-white shadow-sm"
-            />
+  const received = (
+    <section className="order-1">
+      <SectionHeading
+        title="Requests for you"
+        count={lists.incoming.length}
+        highlight
+      />
+      {lists.incoming.length === 0 ? (
+        <EmptyNote>No one is waiting on you.</EmptyNote>
+      ) : (
+        <ul className="space-y-3">
+          {lists.incoming.map((item, index) => (
+            <li
+              key={item.id}
+              style={{ animationDelay: `${index * 60}ms` }}
+              className="panel animate-rise p-5 ring-2 ring-signal/60 sm:p-5"
+            >
+              <PersonSummary item={item} />
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busyId === item.id}
+                  onClick={() =>
+                    runAction(item, {
+                      method: "PATCH",
+                      body: { action: "accept" },
+                    })
+                  }
+                  className="btn btn-primary"
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === item.id}
+                  onClick={() =>
+                    runAction(item, {
+                      method: "PATCH",
+                      body: { action: "decline" },
+                    })
+                  }
+                  className="btn btn-quiet"
+                >
+                  Decline
+                </button>
+              </div>
+            </li>
           ))}
-        </div>
-      </main>
-    );
-  }
+        </ul>
+      )}
+    </section>
+  );
+
+  const sent = (
+    <section className="order-3">
+      <SectionHeading title="Requests you sent" count={lists.outgoing.length} />
+      {lists.outgoing.length === 0 ? (
+        <EmptyNote>Nothing pending.</EmptyNote>
+      ) : (
+        <ul className="divide-y divide-line overflow-hidden rounded-[1.5rem] bg-surface ring-1 ring-line/70">
+          {lists.outgoing.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center justify-between gap-3 px-4 py-3.5"
+            >
+              <PersonSummary item={{ ...item, message: undefined }} compact />
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="text-xs text-faint">
+                  Sent {formatDate(item.createdAt)}
+                </span>
+                <button
+                  type="button"
+                  disabled={busyId === item.id}
+                  onClick={() => runAction(item, { method: "DELETE" })}
+                  className="text-sm font-medium text-muted underline-offset-4 hover:text-danger hover:underline disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const connected = (
+    <section className="order-2 lg:order-none">
+      <SectionHeading
+        title="Your connections"
+        count={lists.connections.length}
+      />
+      {lists.connections.length === 0 ? (
+        <EmptyNote>
+          No connections yet. Send a request from{" "}
+          <Link href="/recommendations" className="font-semibold text-brand">
+            your matches
+          </Link>
+          ; once they accept, you can message each other.
+        </EmptyNote>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          {lists.connections.map((item, index) => {
+            const confirming = confirmingId === item.id;
+
+            return (
+              <li
+                key={item.id}
+                style={{ animationDelay: `${index * 60}ms` }}
+                className="panel flex animate-rise flex-col p-5 sm:p-5"
+              >
+                <PersonSummary item={{ ...item, message: undefined }} />
+                <div className="mt-auto pt-5">
+                  {confirming ? (
+                    <div className="animate-fade rounded-2xl bg-danger-soft p-3">
+                      <p className="text-sm text-danger">
+                        Remove {item.user.name}? Your messages with them will be
+                        deleted.
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => runAction(item, { method: "DELETE" })}
+                          className="btn bg-danger text-white hover:bg-danger/90"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingId(null)}
+                          className="btn btn-quiet"
+                        >
+                          Keep
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/messages?c=${item.id}`}
+                        className="btn btn-ink flex-1"
+                      >
+                        Message
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => setConfirmingId(item.id)}
+                        className="btn btn-quiet"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
 
   return (
-    <main className="flex-1 bg-zinc-50">
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <h1 className="text-4xl font-bold tracking-tight text-zinc-950">
-          Connections
-        </h1>
-
-        <p className="mt-3 mb-10 text-zinc-600">
-          Requests you have received and sent, and the people you are connected
-          with. Find new people on the{" "}
-          <Link href="/recommendations" className="font-medium underline">
-            Recommendations
-          </Link>{" "}
-          page.
-        </p>
-
-        {message && (
-          <p
-            role="alert"
-            className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+    <main className="page">
+      <header>
+        <h1 className="page-title">Connections</h1>
+        <p className="page-lede">
+          Requests you’ve received and sent, and the people you’re connected
+          with. Find new people on{" "}
+          <Link
+            href="/recommendations"
+            className="font-semibold text-brand underline-offset-4 hover:underline"
           >
-            {message}
-          </p>
-        )}
+            your matches
+          </Link>
+          .
+        </p>
+      </header>
 
-        <Section
-          title="Requests received"
-          emptyText="No pending requests."
-          items={lists.incoming}
-          renderActions={(item) => (
-            <>
-              <button
-                type="button"
-                disabled={busyId === item.id}
-                onClick={() =>
-                  runAction(item, {
-                    method: "PATCH",
-                    body: { action: "accept" },
-                  })
-                }
-                className={`${buttonClass} bg-black text-white hover:bg-zinc-800`}
-              >
-                Accept
-              </button>
+      {message && (
+        <p role="alert" className="alert-error mt-6">
+          {message}
+        </p>
+      )}
 
-              <button
-                type="button"
-                disabled={busyId === item.id}
-                onClick={() =>
-                  runAction(item, {
-                    method: "PATCH",
-                    body: { action: "decline" },
-                  })
-                }
-                className={`${buttonClass} border border-zinc-200 text-zinc-900 hover:bg-zinc-50`}
-              >
-                Decline
-              </button>
-            </>
-          )}
-        />
-
-        <Section
-          title="Requests sent"
-          emptyText="You have no pending requests."
-          items={lists.outgoing}
-          renderActions={(item) => (
-            <>
-              <span className="text-xs text-zinc-500">
-                Sent {formatDate(item.createdAt)}
-              </span>
-
-              <button
-                type="button"
-                disabled={busyId === item.id}
-                onClick={() => runAction(item, { method: "DELETE" })}
-                className={`${buttonClass} border border-zinc-200 text-zinc-900 hover:bg-zinc-50`}
-              >
-                Cancel
-              </button>
-            </>
-          )}
-        />
-
-        <Section
-          title="Your connections"
-          emptyText="No connections yet."
-          items={lists.connections}
-          renderActions={(item) => (
-            <>
-              <Link
-                href={`/messages?c=${item.id}`}
-                className={`${buttonClass} bg-black text-white hover:bg-zinc-800`}
-              >
-                Message
-              </Link>
-
-              <button
-                type="button"
-                disabled={busyId === item.id}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Remove ${item.user.name} from your connections? Your messages with them will be deleted.`,
-                    )
-                  ) {
-                    runAction(item, { method: "DELETE" });
-                  }
-                }}
-                className={`${buttonClass} border border-zinc-200 text-zinc-600 hover:bg-zinc-50`}
-              >
-                Remove
-              </button>
-            </>
-          )}
-        />
-      </div>
+      {loading ? (
+        <div className="mt-10 grid gap-3 sm:grid-cols-2" aria-busy="true">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="skeleton h-36 rounded-[1.75rem]" />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 grid items-start gap-10 lg:grid-cols-[1fr_380px]">
+          {connected}
+          <div className="contents lg:flex lg:flex-col lg:gap-10">
+            {received}
+            {sent}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
