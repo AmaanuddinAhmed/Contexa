@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+    canSeeOthers,
     describeDistance,
     distanceKm,
     GRID_DEGREES,
@@ -106,5 +107,27 @@ describe("isLocationVisible", () => {
 
     it("hides a stale location", () => {
         assert.ok(!isLocationVisible({ ghost: false, positionUpdatedAt: daysAgo(MAX_LOCATION_AGE_DAYS + 1) }, now));
+    });
+});
+
+
+describe("canSeeOthers", () => {
+    const now = new Date("2026-10-18T12:00:00Z");
+    const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    it("lets a visible user see others", () => {
+        assert.ok(canSeeOthers({ ghost: false, positionUpdatedAt: daysAgo(1) }, now));
+    });
+
+    it("blocks a user in ghost mode", () => {
+        assert.ok(!canSeeOthers({ ghost: true, positionUpdatedAt: daysAgo(0) }, now));
+    });
+
+    it("blocks a user who is not sharing", () => {
+        assert.ok(!canSeeOthers(null, now));
+    });
+
+    it("blocks a user whose own area has expired", () => {
+        assert.ok(!canSeeOthers({ ghost: false, positionUpdatedAt: daysAgo(MAX_LOCATION_AGE_DAYS + 1) }, now));
     });
 });

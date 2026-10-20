@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authenticate } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { errorResponse } from "@/server/http";
-import { distanceKm, isLocationVisible } from "@/lib/location";
+import { canSeeOthers, distanceKm, isLocationVisible } from "@/lib/location";
 import { Connection } from "@/server/models/Connection";
 import { Profile } from "@/server/models/Profile";
 import { UserLocation } from "@/server/models/UserLocation";
@@ -11,7 +11,8 @@ import { UserLocation } from "@/server/models/UserLocation";
 /**
  * The caller's own shared area (if any) and the areas of their accepted
  * connections who share one, are not in ghost mode, and updated it within
- * MAX_LOCATION_AGE_DAYS. Nobody else's location is ever returned.
+ * MAX_LOCATION_AGE_DAYS. Visibility is mutual: a caller who is not sharing,
+ * is in ghost mode, or whose area has expired gets nobody back.
  */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
@@ -44,14 +45,17 @@ export const GET = async (request: Request) => {
             ])
         );
         const otherIds = [...connectionByUser.keys()];
+        const now = new Date();
+        const canSee = canSeeOthers(mine, now);
 
-        const [locations, profiles] = await Promise.all([
-            UserLocation.find({ userId: { $in: otherIds } }),
-            Profile.find({ userId: { $in: otherIds } }).select({ userId: 1, name: 1, role: 1 })
-        ]);
+        const [locations, profiles] = canSee
+            ? await Promise.all([
+                UserLocation.find({ userId: { $in: otherIds } }),
+                Profile.find({ userId: { $in: otherIds } }).select({ userId: 1, name: 1, role: 1 })
+            ])
+            : [[], []];
 
         const profileById = new Map(profiles.map((profile) => [profile.userId.toString(), profile]));
-        const now = new Date();
 
         const people = locations
             .filter((location) => isLocationVisible(location, now))
@@ -88,6 +92,7 @@ export const GET = async (request: Request) => {
                     }
                     : null,
                 people,
+                canSee,
                 connections: otherIds.length
             }
         });
