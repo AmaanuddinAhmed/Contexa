@@ -16,6 +16,8 @@ export interface MessagesResponse {
         messages: ChatMessage[];
         /** Older history exists before the first message returned. */
         hasMore: boolean;
+        /** The other person has read the caller's messages up to this time. */
+        seenUpTo: string | null;
     };
 }
 
@@ -55,11 +57,12 @@ export const threadPollDelay = (quietForMs: number): number =>
     THREAD_POLL_STEPS.find((step) => quietForMs < step.quietForMs)?.delayMs ??
     THREAD_POLL_IDLE_MS;
 
-/** How often unread counts are refreshed. */
-export const UNREAD_POLL_MS = 30000;
-
 /** Fired on window when a conversation was read, so unread badges refresh at once. */
 export const MESSAGES_READ_EVENT = "contexa-messages-read";
+
+/** Has the other person read this (own) message? */
+export const isSeen = (message: ChatMessage, seenUpTo: string | null): boolean =>
+    message.mine && seenUpTo !== null && message.createdAt <= seenUpTo;
 
 /**
  * Adds `incoming` to `current`, oldest first, keeping one copy of each

@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { clearToken, getToken, useIsLoggedIn } from "@/lib/auth";
+import { MESSAGES_READ_EVENT } from "@/lib/messages";
 import {
-  MESSAGES_READ_EVENT,
-  UNREAD_POLL_MS,
-  UnreadResponse,
-} from "@/lib/messages";
+  clearNotifications,
+  NOTIFICATIONS_POLL_MS,
+  NOTIFICATIONS_REFRESH_EVENT,
+  NotificationsResponse,
+  publishNotifications,
+} from "@/lib/notifications";
 import { usePolling } from "@/lib/usePolling";
 import Logo from "@/components/Logo";
 
@@ -23,11 +26,13 @@ const NAV_LINKS = [
   { href: "/feedback", label: "Rate matches" },
 ];
 
-function UnreadBadge({
+function CountBadge({
   count,
+  label,
   className = "",
 }: {
   count: number;
+  label: string;
   className?: string;
 }) {
   if (count <= 0) return null;
@@ -35,7 +40,7 @@ function UnreadBadge({
   return (
     <span
       className={`inline-flex min-w-5 items-center justify-center rounded-full bg-signal px-1.5 text-[0.7rem] leading-5 font-bold text-ink tabular-nums ${className}`}
-      aria-label={`${count} unread`}
+      aria-label={`${count} ${label}`}
     >
       {count > 99 ? "99+" : count}
     </span>
@@ -46,7 +51,7 @@ export default function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isLoggedIn = useIsLoggedIn();
-  const [unreadTotal, setUnreadTotal] = useState(0);
+  const [counts, setCounts] = useState({ messages: 0, requests: 0 });
   const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -82,7 +87,9 @@ export default function SiteHeader() {
       ? [...NAV_LINKS, { href: "/admin", label: "Evaluation" }]
       : NAV_LINKS;
 
-  const refreshUnread = useCallback(async () => {
+  // Badges for unread messages and requests. Pages listen to what this
+  // publishes, so it is the only poll that runs on every page.
+  const refreshNotifications = useCallback(async () => {
     const token = getToken();
 
     if (!token) {
@@ -90,10 +97,16 @@ export default function SiteHeader() {
     }
 
     try {
-      const response = await api<UnreadResponse>("/messages", { token });
-      setUnreadTotal(response.data.total);
+      const response = await api<NotificationsResponse>("/notifications", {
+        token,
+      });
+      setCounts({
+        messages: response.data.messages,
+        requests: response.data.requests,
+      });
+      publishNotifications(response.data);
     } catch {
-      // The badge is a convenience; the next refresh retries.
+      // Badges are a convenience; the next refresh retries.
     }
   }, []);
 
@@ -102,15 +115,27 @@ export default function SiteHeader() {
       return;
     }
 
-    const onRead = () => void refreshUnread();
+    const refresh = () => void refreshNotifications();
 
-    onRead();
-    window.addEventListener(MESSAGES_READ_EVENT, onRead);
+    refresh();
+    window.addEventListener(MESSAGES_READ_EVENT, refresh);
+    window.addEventListener(NOTIFICATIONS_REFRESH_EVENT, refresh);
 
-    return () => window.removeEventListener(MESSAGES_READ_EVENT, onRead);
-  }, [isLoggedIn, refreshUnread]);
+    return () => {
+      window.removeEventListener(MESSAGES_READ_EVENT, refresh);
+      window.removeEventListener(NOTIFICATIONS_REFRESH_EVENT, refresh);
+    };
+  }, [isLoggedIn, refreshNotifications]);
 
-  usePolling(refreshUnread, UNREAD_POLL_MS, isLoggedIn);
+  usePolling(refreshNotifications, NOTIFICATIONS_POLL_MS, isLoggedIn);
+
+  const badgeFor = (href: string) =>
+    href === "/messages"
+      ? { count: counts.messages, label: "unread" }
+      : href === "/connections"
+        ? { count: counts.requests, label: "new requests" }
+        : null;
+  const totalNew = counts.messages + counts.requests;
 
   // While the mobile menu is open: lock page scroll, close on Escape,
   // and move focus into the menu.
@@ -149,6 +174,8 @@ export default function SiteHeader() {
 
   const handleLogout = () => {
     setMenuOpen(false);
+    setCounts({ messages: 0, requests: 0 });
+    clearNotifications();
     clearToken();
     router.push("/login");
   };
@@ -179,6 +206,7 @@ export default function SiteHeader() {
             >
               {links.map((link) => {
                 const active = isActive(link.href);
+                const badge = badgeFor(link.href);
 
                 return (
                   <Link
@@ -192,9 +220,7 @@ export default function SiteHeader() {
                     }`}
                   >
                     {link.label}
-                    {link.href === "/messages" && (
-                      <UnreadBadge count={unreadTotal} />
-                    )}
+                    {badge && <CountBadge {...badge} />}
                   </Link>
                 );
               })}
@@ -218,7 +244,13 @@ export default function SiteHeader() {
                   onClick={() => setMenuOpen((open) => !open)}
                   aria-expanded={menuOpen}
                   aria-controls="mobile-menu"
-                  aria-label={menuOpen ? "Close menu" : "Open menu"}
+                  aria-label={
+                    menuOpen
+                      ? "Close menu"
+                      : totalNew > 0
+                        ? `Open menu, ${totalNew} new`
+                        : "Open menu"
+                  }
                   className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white transition-transform duration-300 ease-[var(--ease-spring)] active:scale-95 lg:hidden"
                 >
                   <span
@@ -245,11 +277,13 @@ export default function SiteHeader() {
                       }`}
                     />
                   </span>
-                  {!menuOpen && unreadTotal > 0 && (
+                  {!menuOpen && totalNew > 0 && (
                     <span
-                      className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-signal ring-2 ring-ink"
+                      className="absolute -top-1 -right-1 inline-flex min-w-5 animate-fade items-center justify-center rounded-full bg-signal px-1 text-[0.65rem] leading-5 font-bold text-ink tabular-nums ring-2 ring-surface"
                       aria-hidden="true"
-                    />
+                    >
+                      {totalNew > 99 ? "99+" : totalNew}
+                    </span>
                   )}
                 </button>
               </>
@@ -279,6 +313,7 @@ export default function SiteHeader() {
           <nav aria-label="Main" className="flex flex-col">
             {links.map((link, index) => {
               const active = isActive(link.href);
+              const badge = badgeFor(link.href);
 
               return (
                 <Link
@@ -293,9 +328,7 @@ export default function SiteHeader() {
                 >
                   <span className="flex items-center gap-3">
                     {link.label}
-                    {link.href === "/messages" && (
-                      <UnreadBadge count={unreadTotal} className="font-sans" />
-                    )}
+                    {badge && <CountBadge {...badge} className="font-sans" />}
                   </span>
                   <span
                     aria-hidden="true"

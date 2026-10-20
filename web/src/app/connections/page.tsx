@@ -7,6 +7,10 @@ import { getToken } from "@/lib/auth";
 import type { ConnectionItem, ConnectionsResponse } from "@/lib/connections";
 import Avatar from "@/components/Avatar";
 import SampleTag from "@/components/SampleTag";
+import {
+  refreshNotifications,
+  useConnectionsChanged,
+} from "@/lib/notifications";
 
 type Lists = ConnectionsResponse["data"];
 
@@ -148,6 +152,11 @@ export default function ConnectionsPage() {
     };
   }, []);
 
+  // Someone sent, accepted or declined a request: show it without a refresh.
+  useConnectionsChanged(() => {
+    void fetchLists().then((result) => applyResult(result));
+  });
+
   const runAction = async (
     item: ConnectionItem,
     request: { method: "PATCH" | "DELETE"; body?: object },
@@ -170,6 +179,7 @@ export default function ConnectionsPage() {
     // Reload either way, so the page shows the real current state.
     applyResult(await fetchLists(), actionError);
     setBusyId(null);
+    refreshNotifications();
   };
 
   const received = (

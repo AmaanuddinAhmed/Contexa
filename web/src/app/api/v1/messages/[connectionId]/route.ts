@@ -117,11 +117,23 @@ export const GET = async (request: Request, { params }: RouteContext) => {
             );
         }
 
+        // Read receipts: the newest of the caller's messages the other person
+        // has read. Every earlier message of theirs counts as seen too.
+        const lastSeen = await Message.findOne({
+            ...conversation,
+            senderId: auth.userId,
+            readAt: { $exists: true }
+        })
+            .sort({ createdAt: -1 })
+            .select({ createdAt: 1 })
+            .lean();
+
         return NextResponse.json({
             success: true,
             data: {
                 messages: messages.map((message) => toMessageView(message, auth.userId)),
-                hasMore
+                hasMore,
+                seenUpTo: lastSeen?.createdAt ?? null
             }
         });
     } catch (error) {
