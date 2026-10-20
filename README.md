@@ -74,7 +74,7 @@ python -m uvicorn main:app --reload --port 8000
 cd web
 cp .env.example .env.local    # then fill in the values
 npm install
-npm run db:seed               # optional: 100 reproducible synthetic users
+npm run db:seed               # optional: 150 reproducible sample users (labelled "Sample profile")
 npm run dev
 ```
 
@@ -167,4 +167,4 @@ Render's free tier stops an idle service after 15 minutes and takes about a minu
 - Results from synthetic data describe system behaviour, not real-world relevance.
 - No claim is made that `CONTEXT_AWARE` is better until the evaluation shows it.
 - The 0.65 similarity threshold was chosen by inspecting term pairs, not tuned on evaluation results. The same holds for `SEMANTIC`: no claim that it is better until the evaluation shows it.
-- The synthetic users draw from a fixed list of distinct terms, so they understate what `SEMANTIC` changes; real users typing freely are the meaningful test.
+- The sample users draw from a fixed vocabulary (a few needs are worded differently from any skill), so they only partly show what `SEMANTIC` changes; real users typing freely are the meaningful test. of distinct terms, so they understate what `SEMANTIC` changes; real users typing freely are the meaningful test.

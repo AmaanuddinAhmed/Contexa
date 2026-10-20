@@ -22,6 +22,7 @@ export interface Recommendation {
         skills: string[];
         interests: string[];
         collaborationPreferences?: string[];
+        isSample: boolean;
     };
     score: number;
     breakdown: Record<string, number>;
@@ -131,7 +132,8 @@ export const rankForRequester = async (
                 experienceLevel: candidateProfile.experienceLevel,
                 skills: candidateProfile.skills,
                 interests: candidateProfile.interests,
-                collaborationPreferences: candidateProfile.collaborationPreferences
+                collaborationPreferences: candidateProfile.collaborationPreferences,
+                isSample: candidateProfile.isSample === true
             },
             score: result.score,
             breakdown: result.breakdown,

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import type { ConnectionItem, ConnectionsResponse } from "@/lib/connections";
 import Avatar from "@/components/Avatar";
+import SampleTag from "@/components/SampleTag";
 
 type Lists = ConnectionsResponse["data"];
 
@@ -55,6 +56,7 @@ function PersonSummary({
         <p className="truncate font-display text-lg leading-tight font-semibold">
           {user.name}
         </p>
+        {user.isSample && <SampleTag className="mt-1" />}
         <p className="mt-0.5 text-sm text-muted">
           {details || "No details yet"}
           {user.experienceLevel && (

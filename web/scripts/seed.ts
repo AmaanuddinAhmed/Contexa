@@ -1,197 +1,79 @@
 /**
- * Generates 100 synthetic users, each with a profile and an active context.
+ * Replaces the sample population: 150 people with Indian names, hometowns
+ * and languages, each with a profile (marked isSample) and an active context.
  *
- * - Reproducible: faker is seeded, so every run creates the same people
- *   (override with SYNTHETIC_SEED=<number>).
- * - Safe: removes only previous synthetic users (@synthetic.contexa.local)
- *   and their own profiles/contexts. Real accounts are never touched.
+ * - Reproducible: the random generator is seeded, so every run creates the
+ *   same people (override with SYNTHETIC_SEED=<number>).
+ * - Safe: removes only previous sample users (@synthetic.contexa.local) and
+ *   what points at them (profiles, contexts, map areas, connections,
+ *   messages, open feedback rounds). Real accounts and completed feedback
+ *   rounds are never touched.
+ * - Sample accounts get a random password each run, so nobody can sign in
+ *   as one.
  * - Writes retrieval terms for new users and backfills them for everyone.
  *
  * Run from web/:  npm run db:seed
  */
-import { faker } from "@faker-js/faker";
+import { randomBytes } from "node:crypto";
 import mongoose from "mongoose";
 import { hashPassword } from "../src/server/auth";
+import { Connection } from "../src/server/models/Connection";
 import { Context } from "../src/server/models/Context";
+import { FeedbackRound } from "../src/server/models/FeedbackRound";
+import { Message } from "../src/server/models/Message";
 import { Profile } from "../src/server/models/Profile";
 import { User } from "../src/server/models/User";
-import { toMatchTerms } from "../src/server/recommendations/terms";
+import { UserLocation } from "../src/server/models/UserLocation";
 import { backfillMatchTerms } from "./lib/backfillMatchTerms";
+import { buildSamples } from "./lib/buildSamples";
 import { connectForScript } from "./lib/database";
 
-const SYNTHETIC_USER_COUNT = 100;
-const SYNTHETIC_EMAIL_DOMAIN = "@synthetic.contexa.local";
-const DEFAULT_SEED = 20260928;
+const SAMPLE_USER_COUNT = 150;
+const DEFAULT_SEED = 20261021;
 
-// >>> PASTE the vocabulary arrays from backend/src/seed.ts here
-//     (skills, interests, goals, activities, availabilityOptions,
-//      situations, interactionPreferences) 
-const skills = [
-    "Java",
-    "Python",
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Node.js",
-    "MongoDB",
-    "SQL",
-    "Machine Learning",
-    "Data Analysis",
-    "UI/UX",
-    "Figma",
-    "AWS",
-    "Docker",
-    "Cybersecurity"
-];
+const removePreviousSamples = async (): Promise<number> => {
+    const ids = await User.find({
+        email: { $regex: /@synthetic\.contexa\.local$/ }
+    }).distinct("_id");
 
-const interests = [
-    "Artificial Intelligence",
-    "Web Development",
-    "Cloud Computing",
-    "Data Science",
-    "Cybersecurity",
-    "Mobile Development",
-    "UI/UX Design",
-    "Open Source",
-    "Research",
-    "Entrepreneurship"
-];
+    if (ids.length === 0) {
+        return 0;
+    }
 
-const goals = [
-    "Find a project partner",
-    "Find a study partner",
-    "Build a software project",
-    "Learn a new technology",
-    "Find someone to collaborate with",
-    "Get help with a technical problem",
-    "Work on a research project"
-];
+    await Promise.all([
+        Context.deleteMany({ userId: { $in: ids } }),
+        Profile.deleteMany({ userId: { $in: ids } }),
+        UserLocation.deleteMany({ userId: { $in: ids } }),
+        Message.deleteMany({ $or: [{ senderId: { $in: ids } }, { recipientId: { $in: ids } }] }),
+        Connection.deleteMany({ $or: [{ requesterId: { $in: ids } }, { recipientId: { $in: ids } }] }),
+        // Open rounds would show people who no longer exist. Completed rounds
+        // are evaluation data and are kept.
+        FeedbackRound.deleteMany({
+            $or: [{ userId: { $in: ids } }, { status: "open", "items.userId": { $in: ids } }]
+        })
+    ]);
+    await User.deleteMany({ _id: { $in: ids } });
 
-const activities = [
-    "Working on an academic project",
-    "Preparing for exams",
-    "Building a personal project",
-    "Learning a new technology",
-    "Working on research",
-    "Preparing for placements",
-    "Working on a startup idea"
-];
-
-const availabilityOptions = [
-    "Weekday evenings",
-    "Weekends",
-    "Weekday mornings",
-    "Flexible",
-    "After college hours"
-];
-
-const situations = [
-    "I am looking for someone with complementary technical skills.",
-    "I want to collaborate with someone who has similar interests.",
-    "I need help completing a technical project.",
-    "I want to learn by working with another person.",
-    "I am looking for someone interested in building something together."
-];
-
-const interactionPreferences = [
-    "Online",
-    "In-person",
-    "Either"
-];
-
-const randomItems = <T>(items: T[], min: number, max: number): T[] => {
-    const count = faker.number.int({ min, max });
-
-    return faker.helpers.shuffle(items).slice(0, count);
+    return ids.length;
 };
 
 const seed = async (): Promise<void> => {
     await connectForScript();
 
     const seedValue = Number(process.env.SYNTHETIC_SEED ?? DEFAULT_SEED);
-    faker.seed(seedValue);
 
     // Build all indexes before writing, rather than concurrently with inserts.
     await Promise.all([User.init(), Profile.init(), Context.init()]);
 
-    console.log("Removing previous synthetic users and their data...");
+    console.log("Removing previous sample users and their data...");
+    const removed = await removePreviousSamples();
+    console.log(`Removed ${removed} sample users.`);
 
-    const syntheticUserIds = await User.find({
-        email: { $regex: /@synthetic\.contexa\.local$/ }
-    }).distinct("_id");
+    const passwordHash = await hashPassword(randomBytes(32).toString("hex"));
 
-    await Context.deleteMany({ userId: { $in: syntheticUserIds } });
-    await Profile.deleteMany({ userId: { $in: syntheticUserIds } });
-    await User.deleteMany({ _id: { $in: syntheticUserIds } });
+    console.log(`Generating ${SAMPLE_USER_COUNT} sample users (seed ${seedValue})...`);
 
-    const passwordHash = await hashPassword("SyntheticPassword123!");
-
-    console.log(`Generating ${SYNTHETIC_USER_COUNT} synthetic users (seed ${seedValue})...`);
-
-    const users = [];
-    const profiles = [];
-    const contexts = [];
-
-    for (let i = 0; i < SYNTHETIC_USER_COUNT; i++) {
-        const firstName = faker.person.firstName();
-        const lastName = faker.person.lastName();
-
-        const userId = new mongoose.Types.ObjectId();
-
-        users.push({
-            _id: userId,
-            email:
-                `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${i}` +
-                SYNTHETIC_EMAIL_DOMAIN,
-            passwordHash,
-            role: "user"
-        });
-
-        const profileSkills = randomItems(skills, 3, 6);
-        const profileInterests = randomItems(interests, 2, 4);
-
-        profiles.push({
-            userId,
-            name: `${firstName} ${lastName}`,
-            bio: faker.person.bio(),
-            education: faker.helpers.arrayElement(["MCA", "B.Tech", "BCA", "MBA", "M.Sc"]),
-            role: faker.helpers.arrayElement([
-                "Student",
-                "Developer",
-                "Designer",
-                "Researcher",
-                "Analyst"
-            ]),
-            experienceLevel: faker.helpers.arrayElement([
-                "Beginner",
-                "Intermediate",
-                "Advanced"
-            ]),
-            skills: profileSkills,
-            interests: profileInterests,
-            matchTerms: toMatchTerms([...profileSkills, ...profileInterests]),
-            collaborationPreferences: randomItems(
-                ["Project-based", "Study", "Research", "Mentoring"],
-                1,
-                2
-            ),
-            visibility: "public"
-        });
-
-        const contextNeed = randomItems(skills, 1, 3);
-
-        contexts.push({
-            userId,
-            goal: faker.helpers.arrayElement(goals),
-            need: contextNeed,
-            needTerms: toMatchTerms(contextNeed),
-            activity: faker.helpers.arrayElement(activities),
-            availability: faker.helpers.arrayElement(availabilityOptions),
-            situation: faker.helpers.arrayElement(situations),
-            interactionPreference: faker.helpers.arrayElement(interactionPreferences),
-            isActive: true
-        });
-    }
+    const { users, profiles, contexts } = buildSamples(SAMPLE_USER_COUNT, seedValue, passwordHash);
 
     // Bulk inserts: three round-trips instead of three per user.
     await User.insertMany(users);
@@ -200,7 +82,9 @@ const seed = async (): Promise<void> => {
 
     const backfilled = await backfillMatchTerms();
 
-    console.log(`Created ${SYNTHETIC_USER_COUNT} synthetic users, profiles and contexts.`);
+    console.log(
+        `Created ${users.length} sample users (${contexts.length} with an active context).`
+    );
     console.log(
         `Retrieval terms up to date for ${backfilled.profiles} profiles and ${backfilled.contexts} contexts.`
     );

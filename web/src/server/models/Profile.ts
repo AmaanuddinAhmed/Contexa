@@ -14,6 +14,7 @@ export interface IProfile extends Document {
     collaborationPreferences?: string[];
     matchTerms: string[];
     visibility: "public" | "private";
+    isSample: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -69,6 +70,10 @@ const profileSchema = new Schema<IProfile>(
             type: String,
             enum: ["public", "private"],
             default: "public",
+        },
+        isSample: {
+            type: Boolean,
+            default: false,
         },
     },
     {

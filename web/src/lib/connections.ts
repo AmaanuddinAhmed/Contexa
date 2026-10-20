@@ -8,6 +8,7 @@ export interface ConnectionUser {
     experienceLevel?: string;
     skills: string[];
     interests: string[];
+    isSample?: boolean;
 }
 
 export interface ConnectionItem {

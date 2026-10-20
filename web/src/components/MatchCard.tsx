@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ConnectionState } from "@/lib/connections";
 import Avatar from "@/components/Avatar";
+import SampleTag from "@/components/SampleTag";
 
 export interface Recommendation {
   userId: string;
@@ -15,6 +16,7 @@ export interface Recommendation {
     skills: string[];
     interests: string[];
     collaborationPreferences?: string[];
+    isSample?: boolean;
   };
   score: number;
   // PROFILE_ONLY returns skills/interests/experience/collaborationPreferences;
@@ -232,6 +234,7 @@ export default function MatchCard({
         >
           {profile.name}
         </h2>
+        {profile.isSample && <SampleTag className="mt-1.5" />}
         <p className="mt-1 text-sm text-muted">
           {subtitle || "Role not given"}
         </p>

@@ -51,7 +51,8 @@ export const GET = async (request: Request) => {
             education: 1,
             experienceLevel: 1,
             skills: 1,
-            interests: 1
+            interests: 1,
+            isSample: 1
         });
 
         const profileById = new Map(
@@ -76,7 +77,8 @@ export const GET = async (request: Request) => {
                     education: profile?.education,
                     experienceLevel: profile?.experienceLevel,
                     skills: profile?.skills ?? [],
-                    interests: profile?.interests ?? []
+                    interests: profile?.interests ?? [],
+                    isSample: profile?.isSample === true
                 }
             };
         });
