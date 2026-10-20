@@ -6,7 +6,8 @@
  *    (GRID_DEGREES) BEFORE they leave the browser, and again on the server,
  *    so an exact position is never sent or stored.
  *  - A location is shown only to accepted connections, never in ghost mode,
- *    and not once it is older than MAX_LOCATION_AGE_DAYS.
+ *    and not once it is older than MAX_LOCATION_AGE_DAYS. 
+ *  - Seeing is mutual: only people whose own area is visible see others.
  *
  * Pure functions only, so they can be unit tested.
  */
@@ -86,3 +87,10 @@ export const isLocationVisible = (
 ): boolean =>
     !location.ghost &&
     now.getTime() - new Date(location.positionUpdatedAt).getTime() <= MAX_LOCATION_AGE_DAYS * DAY_MS;
+
+
+/** Mutual visibility: you see connections only while your own area is visible. */
+export const canSeeOthers = (
+    mine: { ghost: boolean; positionUpdatedAt: Date | string } | null,
+    now: Date = new Date()
+): boolean => mine !== null && isLocationVisible(mine, now);

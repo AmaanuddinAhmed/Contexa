@@ -6,8 +6,10 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import {
+  canSeeOthers,
   Coordinates,
   describeDistance,
+  isLocationVisible,
   MAX_LOCATION_AGE_DAYS,
   snapToGrid,
 } from "@/lib/location";
@@ -28,6 +30,7 @@ interface MyLocation extends Coordinates {
 interface MapData {
   me: MyLocation | null;
   people: MapPerson[];
+  canSee: boolean;
   connections: number;
 }
 
@@ -169,6 +172,8 @@ export default function MapPage() {
 
   const me = data?.me ?? null;
   const people = data?.people ?? [];
+  const expired = me !== null && !me.ghost && !isLocationVisible(me);
+  const canSee = data?.canSee ?? canSeeOthers(me);
 
   const status = loading ? (
     <div className="space-y-2" aria-busy="true">
@@ -180,7 +185,7 @@ export default function MapPage() {
       <span
         aria-hidden="true"
         className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
-          me.ghost
+          me.ghost || expired
             ? "bg-faint"
             : "bg-ok [animation:pulse-dot_2s_ease-in-out_infinite]"
         }`}
@@ -188,8 +193,10 @@ export default function MapPage() {
       <div>
         <p className="font-semibold">
           {me.ghost
-            ? "Ghost mode is on: nobody can see you"
-            : "Your connections can see your area"}
+            ? "Ghost mode is on: nobody sees you, and you don’t see others"
+            : expired
+              ? "Your area has expired: update it to appear again"
+              : "Your connections can see your area"}
         </p>
         <p className="mt-0.5 text-sm text-muted">
           Area set {new Date(me.positionUpdatedAt).toLocaleDateString()}
@@ -205,7 +212,7 @@ export default function MapPage() {
       <div>
         <p className="font-semibold">You’re not sharing your area</p>
         <p className="mt-0.5 text-sm text-muted">
-          You can still see connections who share theirs.
+          Share your area to see connections who share theirs.
         </p>
       </div>
     </div>
@@ -293,7 +300,7 @@ export default function MapPage() {
                   <span>
                     <span className="block font-semibold">Ghost mode</span>
                     <span className="block text-sm text-muted">
-                      Hide from everyone; you still see them.
+                      Hide from everyone; you won’t see them either.
                     </span>
                   </span>
                   <span
@@ -358,7 +365,15 @@ export default function MapPage() {
 
             {people.length === 0 ? (
               <p className="rounded-[1.5rem] border border-dashed border-line-strong px-5 py-6 text-sm leading-6 text-muted">
-                {data?.connections ? (
+                {!canSee && data?.connections ? (
+                  me?.ghost ? (
+                    "Turn off ghost mode to see your connections."
+                  ) : expired ? (
+                    "Update your area to see your connections."
+                  ) : (
+                    "Share your area to see your connections."
+                  )
+                ) : data?.connections ? (
                   "None of your connections are sharing their area right now."
                 ) : (
                   <>

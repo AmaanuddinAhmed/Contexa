@@ -14,7 +14,7 @@ const isDev = process.env.NODE_ENV !== "production";
  *   inline styles.
  * - Images: map tiles come from tile.openstreetmap.org; data:/blob: are used
  *   by Leaflet.
- * - Fonts: next/font downloads Geist at build time and serves it from this
+ * - Fonts: Geist and Bricolage Grotesque are self-hosted via @fontsource-variable
  *   site, so no Google Fonts domain is needed.
  */
 const contentSecurityPolicy = [
