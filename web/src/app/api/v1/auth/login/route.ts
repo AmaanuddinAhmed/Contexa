@@ -3,7 +3,7 @@ import { connectDatabase } from "@/server/db";
 import { comparePassword, setSessionCookie } from "@/server/auth";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { User } from "@/server/models/User";
-import { loginSchema } from "@/server/validation"; 
+import { loginSchema } from "@/server/validation";
 import { clientIp, normaliseEmail, POLICIES } from "@/server/rateLimit/rules";
 import {
     consumeRateLimit,
@@ -40,6 +40,14 @@ export const POST = async (request: Request) => {
 
         if (!user || !user.isActive) {
             return errorResponse(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+        }
+
+        if (!user.passwordHash) {
+            return errorResponse(
+                401,
+                "USE_GOOGLE_SIGN_IN",
+                "This account signs in with Google. Use Continue with Google."
+            );
         }
 
         const passwordValid = await comparePassword(password, user.passwordHash);

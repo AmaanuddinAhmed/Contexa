@@ -48,7 +48,7 @@ export const clearToken = (): void => {
     window.dispatchEvent(new Event(AUTH_EVENT));
 
     // keepalive lets the request finish even if the page navigates away.
-    fetch("/api/v1/auth/logout", { method: "POST", keepalive: true }).catch(() => {});
+    fetch("/api/v1/auth/logout", { method: "POST", keepalive: true }).catch(() => { });
 };
 
 const subscribe = (onChange: () => void): (() => void) => {
@@ -68,7 +68,7 @@ export const useIsLoggedIn = (): boolean =>
         subscribe,
         () => getToken() !== null,
         () => false, // server render: assume logged out
-    ); 
+    );
 
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -78,14 +78,10 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
  * guards never redirect during the first (server-rendered) paint.
  */
 export const useAuthStatus = (): AuthStatus =>
-  useSyncExternalStore(
-    subscribe,
-    () => (getToken() !== null ? "authenticated" : "unauthenticated"),
-    () => "loading",
-  );
+    useSyncExternalStore(
+        subscribe,
+        () => (getToken() !== null ? "authenticated" : "unauthenticated"),
+        () => "loading",
+    );
 
-/** Only same-site paths, e.g. "/context" (blocks "//evil.com" redirects). */
-export const safeNextPath = (value: string | null): string | null =>
-  value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\")
-    ? value
-    : null;
+export { safeNextPath } from "./paths";

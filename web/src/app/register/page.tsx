@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 import AuthShell from "@/components/AuthShell";
+import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 
 interface RegisterResponse {
   success: boolean;
@@ -76,6 +77,8 @@ export default function RegisterPage() {
       title="Create your account"
       lede="Next you’ll set up your profile and say what you need right now."
     >
+      <GoogleButton />
+      <OrDivider />
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="label">
