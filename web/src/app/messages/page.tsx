@@ -17,16 +17,17 @@ import { getToken } from "@/lib/auth";
 import type { ConnectionItem, ConnectionsResponse } from "@/lib/connections";
 import {
   ChatMessage,
+  isSeen,
   mergeMessages,
   MESSAGE_MAX_LENGTH,
   MESSAGES_READ_EVENT,
   MessagesResponse,
   SendMessageResponse,
   threadPollDelay,
-  UNREAD_POLL_MS,
   UnreadResponse,
 } from "@/lib/messages";
-import { useAdaptivePolling, usePolling } from "@/lib/usePolling";
+import { useConnectionsChanged, useUnreadChanged } from "@/lib/notifications";
+import { useAdaptivePolling } from "@/lib/usePolling";
 import Avatar from "@/components/Avatar";
 
 const errorText = (error: unknown, fallback: string) =>
@@ -48,6 +49,42 @@ const formatDay = (value: string) =>
 const isSameDay = (first: string, second: string) =>
   new Date(first).toDateString() === new Date(second).toDateString();
 
+/** One tick: sent. Two ticks: the other person has read it. */
+function ReadTicks({ seen }: { seen: boolean }) {
+  return (
+    <span
+      className={`inline-flex ${seen ? "text-white" : "text-white/60"}`}
+      role="img"
+      aria-label={seen ? "Seen" : "Sent"}
+      title={seen ? "Seen" : "Sent"}
+    >
+      <svg
+        viewBox="0 0 18 12"
+        className="h-3 w-[18px]"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M1.5 6.5l3 3 6.5-7"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {seen && (
+          <path
+            d="M7.5 9.5l.5.5 6.5-7.5"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    </span>
+  );
+}
+
 function Thread({
   connection,
   onBack,
@@ -64,6 +101,8 @@ function Thread({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  // Read receipts: the other person has read my messages up to this time.
+  const [seenUpTo, setSeenUpTo] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
   // Follow new messages only while the reader is at the bottom.
@@ -101,6 +140,7 @@ function Thread({
         if (!cancelled) {
           setMessages(response.data.messages);
           setHasMore(response.data.hasMore);
+          setSeenUpTo(response.data.seenUpTo);
           window.dispatchEvent(new Event(MESSAGES_READ_EVENT));
         }
       })
@@ -137,6 +177,7 @@ function Thread({
       );
 
       setError("");
+      setSeenUpTo(response.data.seenUpTo);
 
       if (fresh.length > 0) {
         setMessages((current) => mergeMessages(current, fresh));
@@ -344,11 +385,14 @@ function Thread({
                         {message.body}
                       </p>
                       <p
-                        className={`mt-0.5 text-right text-[11px] tabular-nums ${
+                        className={`mt-0.5 flex items-center justify-end gap-1 text-[11px] tabular-nums ${
                           message.mine ? "text-white/70" : "text-faint"
                         }`}
                       >
                         {formatTime(message.createdAt)}
+                        {message.mine && (
+                          <ReadTicks seen={isSeen(message, seenUpTo)} />
+                        )}
                       </p>
                     </div>
                   </div>
@@ -448,6 +492,15 @@ function MessagesView() {
     };
   }, []);
 
+  // A request was accepted (new conversation) or a connection removed.
+  useConnectionsChanged(() => {
+    api<ConnectionsResponse>("/connections", { token: getToken() ?? undefined })
+      .then((response) => setConnections(response.data.connections))
+      .catch(() => {
+        // The next change retries.
+      });
+  });
+
   const refreshUnread = useCallback(async () => {
     try {
       const response = await api<UnreadResponse>("/messages", {
@@ -468,7 +521,8 @@ function MessagesView() {
     return () => window.removeEventListener(MESSAGES_READ_EVENT, onRead);
   }, [refreshUnread]);
 
-  usePolling(refreshUnread, UNREAD_POLL_MS);
+  // The header's poll notices new messages; per-conversation counts follow.
+  useUnreadChanged(() => void refreshUnread());
 
   const selected = connections.find((item) => item.id === selectedId) ?? null;
 

@@ -12,6 +12,7 @@ import {
 import MatchCard, { Recommendation } from "@/components/MatchCard";
 import ScanPanel from "@/components/ScanPanel";
 import Segmented from "@/components/Segmented";
+import { useConnectionsChanged } from "@/lib/notifications";
 
 type RecommendationMode = "PROFILE_ONLY" | "CONTEXT_AWARE";
 type Matcher = "EXACT" | "SEMANTIC";
@@ -116,6 +117,23 @@ export default function RecommendationsPage() {
       setLoading(false);
     }
   }, [mode, matcher]);
+
+  // Keeps the Connect buttons current when a request is accepted or declined.
+  useConnectionsChanged(() => {
+    const token = getToken();
+
+    if (!token) {
+      return;
+    }
+
+    api<ConnectionsResponse>("/connections", { token })
+      .then((connections) =>
+        setConnectionStates(toStateByUserId(connections.data)),
+      )
+      .catch(() => {
+        // The next change retries.
+      });
+  });
 
   const sendConnectionRequest = async (
     recommendation: Recommendation,

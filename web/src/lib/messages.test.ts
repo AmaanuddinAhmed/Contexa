@@ -9,6 +9,7 @@ import {
     mergeMessages,
     THREAD_POLL_IDLE_MS,
     threadPollDelay,
+    isSeen
 } from "./messages";
 
 const message = (id: string, createdAt: string): ChatMessage => ({
@@ -78,5 +79,24 @@ describe("threadPollDelay", () => {
         const samples = [0, 10_000, 30_000, 60_000, 120_000, 200_000, 300_000, 900_000];
         const delays = samples.map(threadPollDelay);
         delays.slice(1).forEach((delay, index) => assert.ok(delay >= delays[index]));
+    });
+});
+
+
+describe("isSeen", () => {
+    const mine = { ...message("m1", "2026-10-20T10:00:00.000Z"), mine: true };
+
+    it("is seen once the other person has read up to it or later", () => {
+        assert.ok(isSeen(mine, "2026-10-20T10:00:00.000Z"));
+        assert.ok(isSeen(mine, "2026-10-20T10:05:00.000Z"));
+    });
+
+    it("is not seen before that", () => {
+        assert.ok(!isSeen(mine, "2026-10-20T09:59:59.999Z"));
+        assert.ok(!isSeen(mine, null));
+    });
+
+    it("never marks the other person's messages", () => {
+        assert.ok(!isSeen({ ...mine, mine: false }, "2026-10-20T11:00:00.000Z"));
     });
 });
