@@ -14,7 +14,7 @@ export const GET = async (request: Request) => {
     try {
         await connectDatabase();
 
-        const user = await User.findById(auth.userId).select("-passwordHash");
+        const user = await User.findById(auth.userId).select("-passwordHash -googleId");
 
         if (!user) {
             return errorResponse(404, "USER_NOT_FOUND", "User not found.");

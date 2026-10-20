@@ -5,7 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { safeNextPath, setToken } from "@/lib/auth";
+import { useQueryParam } from "@/lib/useQueryParam";
 import AuthShell from "@/components/AuthShell";
+import GoogleButton, { OrDivider } from "@/components/GoogleButton";
+
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_unavailable: "Google sign-in isn’t set up yet. Use email for now.",
+  google_cancelled: "Google sign-in was cancelled.",
+  google_state: "That sign-in link expired. Please try again.",
+  google_unverified:
+    "Your Google email isn’t verified, so it can’t be used here.",
+  google_failed: "Google sign-in didn’t work. Please try again.",
+  account_disabled: "This account has been disabled.",
+};
 
 interface LoginResponse {
   success: boolean;
@@ -25,9 +37,20 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Errors sent back by the Google sign-in callback (?error=...), shown
+  // until the email form is used.
+  const googleError = useQueryParam("error");
+  const [triedEmail, setTriedEmail] = useState(false);
+  const shownMessage =
+    message ||
+    (googleError && !triedEmail
+      ? (GOOGLE_ERRORS[googleError] ?? GOOGLE_ERRORS.google_failed)
+      : "");
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
+    setTriedEmail(true);
     setIsSubmitting(true);
 
     try {
@@ -58,6 +81,9 @@ export default function LoginPage() {
       title="Welcome back"
       lede="Log in to see who matches what you’re working on."
     >
+      <GoogleButton />
+      <OrDivider />
+
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="label">
@@ -89,9 +115,9 @@ export default function LoginPage() {
           />
         </div>
 
-        {message && (
+        {shownMessage && (
           <p role="alert" className="alert-error">
-            {message}
+            {shownMessage}
           </p>
         )}
 

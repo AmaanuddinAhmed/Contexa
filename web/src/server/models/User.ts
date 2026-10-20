@@ -4,7 +4,11 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
     email: string;
-    passwordHash: string;
+    /** Absent on accounts created with Google sign-in. */
+    passwordHash?: string;
+    googleId?: string;
+    /** Google profile photo URL, kept for profile pictures. */
+    googlePicture?: string;
     role: "user" | "admin";
     isActive: boolean;
     createdAt: Date;
@@ -20,9 +24,16 @@ const userSchema = new Schema<IUser>(
             lowercase: true,
             trim: true
         },
-        passwordHash: {
+                passwordHash: {
+            type: String
+        },
+        googleId: {
             type: String,
-            required: true
+            unique: true,
+            sparse: true
+        },
+        googlePicture: {
+            type: String
         },
         role: {
             type: String,

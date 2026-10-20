@@ -91,6 +91,9 @@ Open http://localhost:3000.
 | `RECOMMENDATION_SERVICE_URL`        | Base URL of the recommendation service                     |
 | `INTERNAL_API_KEY`                  | Shared secret sent to the recommendation service           |
 | `RECOMMENDATION_SERVICE_TIMEOUT_MS` | Scoring timeout; 10000 by default, use 60000 in production |
+| `GOOGLE_CLIENT_ID`                  | OAuth client ID for Google sign-in                         |
+| `GOOGLE_CLIENT_SECRET`              | OAuth client secret for Google sign-in                     |
+| `APP_URL`                           | Production URL; base of the Google redirect URI            |
 
 **Recommendation service:** `INTERNAL_API_KEY`, which must match the web app's value. Leave it unset locally to disable the check.
 
