@@ -257,8 +257,10 @@ function Thread({
             {user.name}
           </p>
           <p className="truncate text-xs text-muted">
-            {[user.role, user.education].filter(Boolean).join(", ") ||
-              "Connected"}
+            {user.isSample
+              ? "Sample profile, won’t reply"
+              : [user.role, user.education].filter(Boolean).join(", ") ||
+                "Connected"}
           </p>
         </div>
       </header>
@@ -304,7 +306,9 @@ function Thread({
                   You and {user.name} are connected
                 </p>
                 <p className="mt-1 text-sm text-muted">
-                  Say hello and mention what you’d like to work on.
+                  {user.isSample
+                    ? "This is a sample profile, so it won’t reply."
+                    : "Say hello and mention what you’d like to work on."}
                 </p>
               </div>
             )}
@@ -539,7 +543,9 @@ function MessagesView() {
                           {item.user.name}
                         </span>
                         <span className="block truncate text-xs text-muted">
-                          {item.user.role || "Connected"}
+                          {item.user.isSample
+                            ? "Sample profile"
+                            : item.user.role || "Connected"}
                         </span>
                       </span>
 
