@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { REPORT_REASON_LABELS, ReportReason } from "@/lib/safety";
+import ServiceStatus from "@/components/ServiceStatus";
 
 // ---------- shapes returned by /api/v1/admin/* ----------
 
@@ -322,6 +324,182 @@ type Loaded =
   | { status: "error"; message: string }
   | { status: "ready"; dashboard: Dashboard; experiments: ExperimentRun[] };
 
+interface ReportPerson {
+  userId: string;
+  name: string;
+  email: string | null;
+}
+
+interface ReportItem {
+  id: string;
+  reason: ReportReason;
+  details: string | null;
+  status: "open" | "reviewed";
+  createdAt: string;
+  reviewedAt: string | null;
+  reporter: ReportPerson;
+  reported: ReportPerson;
+  messages: { fromReporter: boolean; body: string; createdAt: string }[];
+}
+
+/** User reports (block/report feature), open ones first. */
+function ReportsPanel() {
+  const [reports, setReports] = useState<ReportItem[] | null>(null);
+  const [open, setOpen] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    api<{ data: { open: number; reports: ReportItem[] } }>("/admin/reports", {
+      token: getToken() ?? undefined,
+    })
+      .then((response) => {
+        if (!cancelled) {
+          setReports(response.data.reports);
+          setOpen(response.data.open);
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load reports.",
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const markReviewed = async (report: ReportItem) => {
+    setBusyId(report.id);
+    setError("");
+
+    try {
+      await api(`/admin/reports/${report.id}`, {
+        method: "PATCH",
+        token: getToken() ?? undefined,
+        body: JSON.stringify({ status: "reviewed" }),
+      });
+      setReports((list) =>
+        (list ?? []).map((item) =>
+          item.id === report.id
+            ? {
+                ...item,
+                status: "reviewed",
+                reviewedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      setOpen((count) => Math.max(0, count - 1));
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Unable to update the report.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const who = (person: ReportPerson) =>
+    person.email ? `${person.name} (${person.email})` : person.name;
+
+  return (
+    <Section
+      title="Reports"
+      description={`${open} open. Reporting also blocks the person, so the two no longer see each other. Messages are copied at report time (latest 20).`}
+    >
+      {error && (
+        <p role="alert" className="alert-error mb-4">
+          {error}
+        </p>
+      )}
+
+      {reports === null ? (
+        !error && <div className="skeleton h-24 rounded-[1.5rem]" />
+      ) : reports.length === 0 ? (
+        <Table headers={[]} rows={[]} empty="No reports." />
+      ) : (
+        <ul className="grid gap-3">
+          {reports.map((report) => (
+            <li
+              key={report.id}
+              className="rounded-[1.5rem] bg-surface p-5 shadow-[var(--shadow-lift)] ring-1 ring-line/70"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {REPORT_REASON_LABELS[report.reason]}
+                    <span
+                      className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        report.status === "open"
+                          ? "bg-danger-soft text-danger"
+                          : "bg-sunk text-muted"
+                      }`}
+                    >
+                      {report.status}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {who(report.reporter)} reported {who(report.reported)},{" "}
+                    {new Date(report.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                {report.status === "open" && (
+                  <button
+                    type="button"
+                    disabled={busyId === report.id}
+                    onClick={() => markReviewed(report)}
+                    className="btn btn-quiet shrink-0 px-4 py-2"
+                  >
+                    Mark reviewed
+                  </button>
+                )}
+              </div>
+
+              {report.details && (
+                <p className="mt-3 rounded-xl bg-sunk p-3 text-sm whitespace-pre-wrap">
+                  {report.details}
+                </p>
+              )}
+
+              {report.messages.length > 0 && (
+                <details className="mt-3 text-sm">
+                  <summary className="cursor-pointer font-medium text-brand">
+                    {report.messages.length} message
+                    {report.messages.length === 1 ? "" : "s"}
+                  </summary>
+                  <ol className="mt-2 space-y-1.5">
+                    {report.messages.map((message, index) => (
+                      <li key={index} className="text-ink-soft">
+                        <span className="font-semibold">
+                          {message.fromReporter ? "Reporter" : "Reported"}:
+                        </span>{" "}
+                        {message.body}
+                        <span className="ml-2 text-xs text-faint">
+                          {new Date(message.createdAt).toLocaleString()}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
 export default function AdminPage() {
   const [state, setState] = useState<Loaded>({ status: "loading" });
   const [exporting, setExporting] = useState(false);
@@ -434,6 +612,8 @@ export default function AdminPage() {
           evidence comes from blind ratings; synthetic experiments show how the
           system behaves.
         </p>
+
+        <ServiceStatus />
 
         <Section title="Overview">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -626,6 +806,8 @@ export default function AdminPage() {
             </div>
           )}
         </Section>
+
+        <ReportsPanel />
       </div>
     </main>
   );

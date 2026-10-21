@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Context, currentContextFilter, IContext } from "@/server/models/Context";
 import { Profile, IProfile } from "@/server/models/Profile";
 import { User } from "@/server/models/User";
+import { hiddenUserIdsFor } from "@/server/safety/service";
 import { toMatchTerms } from "./terms";
 
 /**
@@ -49,9 +50,9 @@ export interface CandidatePool {
     strategy: "full" | "retrieval";
 }
 
-/** Public profiles other than the requester's. */
+/** Public profiles other than the requester's and anyone blocked either way. */
 interface BaseProfileFilter {
-    userId: { $ne: mongoose.Types.ObjectId };
+    userId: { $nin: mongoose.Types.ObjectId[] };
     visibility: "public";
 }
 
@@ -134,7 +135,7 @@ const retrieveCandidateIds = async (
             ? Promise.resolve([])
             : Context.find({
                 ...currentContextFilter(),
-                userId: { $ne: requesterId },
+                userId: { $nin: baseFilter.userId.$nin },
                 needTerms: { $in: profileTerms }
             })
                 .sort({ _id: -1 })
@@ -190,7 +191,7 @@ const retrieveCandidateIds = async (
     if (chosen.length < limit) {
         const fill = await Profile.find({
             ...baseFilter,
-            userId: { ...baseFilter.userId, $nin: chosen }
+            userId: { $nin: [...baseFilter.userId.$nin, ...chosen] }
         })
             .sort({ updatedAt: -1 })
             .limit(limit - chosen.length)
@@ -211,7 +212,7 @@ export const generateCandidates = async (
     const limit = getCandidatePoolLimit();
 
     const baseFilter: BaseProfileFilter = {
-        userId: { $ne: requesterId },
+        userId: { $nin: [requesterId, ...(await hiddenUserIdsFor(requesterId))] },
         visibility: "public"
     };
 

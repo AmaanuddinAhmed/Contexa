@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import SiteHeader from "@/components/SiteHeader"; 
+import SiteHeader from "@/components/SiteHeader";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import WarmUp from "@/components/WarmUp";
 
 export const metadata: Metadata = {
   title: {
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </div>
         <ServiceWorkerRegistration />
+        <WarmUp />
       </body>
     </html>
   );

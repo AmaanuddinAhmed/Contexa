@@ -303,6 +303,13 @@ export default function RecommendationsPage() {
                 onConnect={() =>
                   sendConnectionRequest(recommendation, index + 1)
                 }
+                onBlocked={() =>
+                  setRecommendations((list) =>
+                    list.filter(
+                      (item) => item.userId !== recommendation.userId,
+                    ),
+                  )
+                }
               />
             ))}
           </div>

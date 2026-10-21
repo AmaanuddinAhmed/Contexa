@@ -9,6 +9,7 @@ import { Profile } from "@/server/models/Profile";
 import { User } from "@/server/models/User";
 import { connectionRequestSchema } from "@/server/validation";
 import { avatarUrlsFor } from "@/server/avatars/service";
+import { isBlockedEitherWay } from "@/server/safety/service";
 
 // Upper bound on records returned by one listing.
 const MAX_LISTED = 200;
@@ -146,7 +147,9 @@ export const POST = async (request: Request) => {
             );
         }
 
-        if (!recipientUser || !recipientProfile) {
+        // A block either way looks the same as an unavailable person, so the
+        // blocked person cannot tell they were blocked.
+        if (!recipientUser || !recipientProfile || await isBlockedEitherWay(auth.userId, recipientId)) {
             return errorResponse(404, "RECIPIENT_NOT_FOUND", "This person is not available.");
         }
 
