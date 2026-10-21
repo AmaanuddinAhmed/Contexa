@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 /** Avatar tints, picked from the name so a person keeps theirs. */
 const TINTS = [
   "bg-brand-soft text-brand-ink",
@@ -23,16 +27,36 @@ const initials = (name: string) =>
 
 export default function Avatar({
   name,
+  src,
   size = "md",
 }: {
   name: string;
+  /** Profile picture URL; initials are shown without one or if it fails to load. */
+  src?: string | null;
   size?: "sm" | "md" | "lg";
 }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const sizes = {
     sm: "h-9 w-9 rounded-xl text-xs",
     md: "h-12 w-12 rounded-2xl text-sm",
     lg: "h-16 w-16 rounded-[1.35rem] text-lg",
   };
+
+  if (src && src !== failedSrc) {
+    return (
+      // Served by our own API at a fixed small size, so next/image adds nothing here.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailedSrc(src)}
+        className={`shrink-0 bg-sunk object-cover ${sizes[size]}`}
+      />
+    );
+  }
 
   return (
     <span

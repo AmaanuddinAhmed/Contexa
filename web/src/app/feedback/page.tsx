@@ -16,6 +16,7 @@ interface Person {
   skills: string[];
   interests: string[];
   collaborationPreferences: string[];
+  avatarUrl?: string | null;
 }
 
 interface Round {
@@ -76,7 +77,7 @@ function PersonCard({
       }`}
     >
       <div className="flex items-start gap-4">
-        <Avatar name={person.name} />
+        <Avatar src={person.avatarUrl} name={person.name} />
 
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-xl leading-tight font-semibold">

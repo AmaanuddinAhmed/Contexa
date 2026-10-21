@@ -5,6 +5,7 @@ import { errorResponse, readJsonBody } from "@/server/http";
 import { Profile } from "@/server/models/Profile";
 import { toMatchTerms } from "@/server/recommendations/terms";
 import { profileSchema } from "@/server/validation";
+import { avatarUrlFor } from "@/server/avatars/service";
 
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
@@ -16,9 +17,12 @@ export const GET = async (request: Request) => {
     try {
         await connectDatabase();
 
-        const profile = await Profile.findOne({ userId: auth.userId });
+        const [profile, avatarUrl] = await Promise.all([
+            Profile.findOne({ userId: auth.userId }),
+            avatarUrlFor(auth.userId)
+        ]);
 
-        return NextResponse.json({ success: true, data: { profile } });
+        return NextResponse.json({ success: true, data: { profile, avatarUrl } });
     } catch (error) {
         console.error("Get profile error:", error);
         return errorResponse(500, "PROFILE_FETCH_FAILED", "Unable to retrieve profile.");

@@ -54,7 +54,11 @@ function PersonSummary({
 
   return (
     <div className="flex min-w-0 items-start gap-3.5">
-      <Avatar name={user.name} size={compact ? "sm" : "md"} />
+      <Avatar
+        src={user.avatarUrl}
+        name={user.name}
+        size={compact ? "sm" : "md"}
+      />
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-lg leading-tight font-semibold">

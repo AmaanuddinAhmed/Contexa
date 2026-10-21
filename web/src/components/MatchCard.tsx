@@ -17,6 +17,7 @@ export interface Recommendation {
     interests: string[];
     collaborationPreferences?: string[];
     isSample?: boolean;
+    avatarUrl?: string | null;
   };
   score: number;
   // PROFILE_ONLY returns skills/interests/experience/collaborationPreferences;
@@ -227,7 +228,11 @@ export default function MatchCard({
 
   const identity = (
     <div className="flex items-start gap-4">
-      <Avatar name={profile.name} size={featured ? "lg" : "md"} />
+      <Avatar
+        src={profile.avatarUrl}
+        name={profile.name}
+        size={featured ? "lg" : "md"}
+      />
       <div className="min-w-0 flex-1">
         <h2
           className={`font-display leading-tight font-semibold ${featured ? "text-2xl sm:text-3xl" : "text-xl"}`}

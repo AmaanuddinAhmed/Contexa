@@ -31,7 +31,9 @@ export const POLICIES = {
     /** Login attempts for one account (cleared after a successful login). */
     loginEmail: { scope: "login:email", limit: 5, windowMs: 15 * MINUTE },
     /** New accounts from one IP. */
-    registerIp: { scope: "register:ip", limit: 20, windowMs: 60 * MINUTE }
+    registerIp: { scope: "register:ip", limit: 20, windowMs: 60 * MINUTE },
+    /** Profile picture uploads by one user. */
+    avatarUser: { scope: "avatar:user", limit: 20, windowMs: 60 * MINUTE }
 } satisfies Record<string, RateLimitPolicy>;
 
 export interface RateWindow {

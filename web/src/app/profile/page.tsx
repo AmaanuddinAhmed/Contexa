@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { prepareAvatar } from "@/lib/avatarImage";
 import Avatar from "@/components/Avatar";
 import Segmented from "@/components/Segmented";
 import OnboardingSteps from "@/components/OnboardingSteps";
@@ -33,7 +34,13 @@ interface ProfileResponse {
   success: boolean;
   data: {
     profile: Profile | null;
+    avatarUrl?: string | null;
   };
+}
+
+interface AvatarResponse {
+  success: boolean;
+  data: { avatarUrl: string | null };
 }
 
 const emptyProfile: Profile = {
@@ -71,6 +78,9 @@ export default function ProfilePage() {
   const [preferences, setPreferences] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -86,6 +96,8 @@ export default function ProfilePage() {
         const response = await api<ProfileResponse>("/profile", {
           token,
         });
+
+        setAvatarUrl(response.data.avatarUrl ?? null);
 
         if (response.data.profile) {
           const savedProfile = response.data.profile;
@@ -149,6 +161,55 @@ export default function ProfilePage() {
     }
   };
 
+  const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Clear the input so choosing the same file again still triggers a change.
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setAvatarBusy(true);
+    setAvatarError("");
+
+    try {
+      const image = await prepareAvatar(file);
+      const response = await api<AvatarResponse>("/profile/avatar", {
+        method: "PUT",
+        token: getToken() ?? undefined,
+        headers: { "Content-Type": image.type },
+        body: image,
+      });
+      setAvatarUrl(response.data.avatarUrl);
+    } catch (error) {
+      setAvatarError(
+        error instanceof Error ? error.message : "Unable to upload the photo.",
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarBusy(true);
+    setAvatarError("");
+
+    try {
+      await api<AvatarResponse>("/profile/avatar", {
+        method: "DELETE",
+        token: getToken() ?? undefined,
+      });
+      setAvatarUrl(null);
+    } catch (error) {
+      setAvatarError(
+        error instanceof Error ? error.message : "Unable to remove the photo.",
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   const update = (changes: Partial<Profile>) => {
     setSaved(false);
     setProfile((current) => ({ ...current, ...changes }));
@@ -179,6 +240,54 @@ export default function ProfilePage() {
             className="panel grid animate-rise gap-7 sm:p-9"
           >
             <FormSection title="About you">
+              <div className="flex items-center gap-4">
+                <Avatar
+                  name={profile.name || "You"}
+                  src={avatarUrl}
+                  size="lg"
+                />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap gap-2">
+                    <label
+                      className={`btn btn-quiet cursor-pointer px-4 py-2 ${
+                        avatarBusy ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    >
+                      {avatarBusy
+                        ? "Saving photo"
+                        : avatarUrl
+                          ? "Change photo"
+                          : "Add a photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={uploadAvatar}
+                        disabled={avatarBusy}
+                        className="sr-only"
+                      />
+                    </label>
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={removeAvatar}
+                        disabled={avatarBusy}
+                        className="btn px-3 py-2 text-muted hover:text-danger"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">
+                    Optional. Cropped to a square; saved straight away.
+                  </p>
+                </div>
+              </div>
+              {avatarError && (
+                <p role="alert" className="alert-error">
+                  {avatarError}
+                </p>
+              )}
+
               <div>
                 <label htmlFor="name" className="label">
                   Name
@@ -339,7 +448,7 @@ export default function ProfilePage() {
           </p>
           <div className="rounded-[1.75rem] bg-surface p-6 shadow-[var(--shadow-float)] ring-1 ring-line/70">
             <div className="flex items-start gap-4">
-              <Avatar name={profile.name || "You"} />
+              <Avatar name={profile.name || "You"} src={avatarUrl} />
               <div className="min-w-0">
                 <p className="font-display text-xl leading-tight font-semibold break-words">
                   {profile.name || "Your name"}

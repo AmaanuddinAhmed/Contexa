@@ -13,6 +13,7 @@ import {
     validateGoogleClaims
 } from "@/server/oauth/google";
 import { readCookie } from "@/server/session";
+import { copyGooglePhotoIfMissing } from "@/server/avatars/service";
 
 /**
  * Google redirects here with ?code&state. Checks the state, swaps the code
@@ -97,6 +98,10 @@ export const GET = async (request: Request) => {
 
         if (picture) user.googlePicture = picture;
         await user.save();
+
+        if (picture) {
+            await copyGooglePhotoIfMissing(user.id, picture);
+        }
 
         const next = created
             ? "/profile?onboarding=1"
