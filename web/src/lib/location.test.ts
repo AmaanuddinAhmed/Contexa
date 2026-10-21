@@ -7,6 +7,7 @@ import { describe, it } from "node:test";
 import {
     canSeeOthers,
     describeDistance,
+    directionsUrl,
     distanceKm,
     GRID_DEGREES,
     isLocationVisible,
@@ -129,5 +130,32 @@ describe("canSeeOthers", () => {
 
     it("blocks a user whose own area has expired", () => {
         assert.ok(!canSeeOthers({ ghost: false, positionUpdatedAt: daysAgo(MAX_LOCATION_AGE_DAYS + 1) }, now));
+    });
+});
+
+describe("directionsUrl", () => {
+    const destinationOf = (url: string) =>
+        new URL(url).searchParams.get("destination");
+
+    it("links to Google Maps directions for a grid-cell centre", () => {
+        const url = directionsUrl({ lat: 12.935, lng: 77.535 })!;
+        assert.ok(url.startsWith("https://www.google.com/maps/dir/?"));
+        assert.equal(new URL(url).searchParams.get("api"), "1");
+        assert.equal(destinationOf(url), "12.935,77.535");
+    });
+
+    it("never links to a more precise point than the grid cell", () => {
+        const url = directionsUrl({ lat: 12.93712, lng: 77.53468 })!;
+        assert.equal(destinationOf(url), "12.935,77.535");
+    });
+
+    it("sends no origin, so the viewer's own position is not in the link", () => {
+        const url = directionsUrl({ lat: 12.935, lng: 77.535 })!;
+        assert.equal(new URL(url).searchParams.get("origin"), null);
+    });
+
+    it("returns null for invalid coordinates", () => {
+        assert.equal(directionsUrl({ lat: 95, lng: 77.5 }), null);
+        assert.equal(directionsUrl({ lat: Number.NaN, lng: 77.5 }), null);
     });
 });

@@ -9,6 +9,7 @@ import {
   canSeeOthers,
   Coordinates,
   describeDistance,
+  directionsUrl,
   isLocationVisible,
   MAX_LOCATION_AGE_DAYS,
   snapToGrid,
@@ -393,7 +394,7 @@ export default function MapPage() {
                 {people.map((person) => (
                   <li
                     key={person.userId}
-                    className="flex items-center justify-between gap-3 px-4 py-3.5"
+                    className="flex flex-col gap-3 px-4 py-3.5"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar
@@ -413,15 +414,35 @@ export default function MapPage() {
                         )}
                       </div>
                     </div>
-                    <Link
-                      href={`/messages?c=${person.connectionId}`}
-                      className="btn btn-quiet shrink-0 px-4 py-2"
-                    >
-                      Message
-                    </Link>
+                    <div className="grid grid-cols-2 gap-2">
+                      {directionsUrl(person) && (
+                        <a
+                          href={directionsUrl(person)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Directions to ${person.name}'s approximate area, opens Google Maps`}
+                          className="btn btn-quiet px-4 py-2"
+                        >
+                          Directions
+                        </a>
+                      )}
+                      <Link
+                        href={`/messages?c=${person.connectionId}`}
+                        className="btn btn-quiet px-4 py-2"
+                      >
+                        Message
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ul>
+            )}
+            {people.length > 0 && (
+              <p className="mt-3 text-xs text-muted">
+                Directions open Google Maps to the centre of their approximate
+                area (about 1 km), not to where they actually are. Message them
+                to agree on a meeting place.
+              </p>
             )}
           </section>
         </div>

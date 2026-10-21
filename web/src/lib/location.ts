@@ -80,6 +80,17 @@ export const describeDistance = (km: number): string => {
     return `About ${Math.round(km / 10) * 10} km away`;
 };
 
+export const directionsUrl = (to: Coordinates): string | null => {
+    if (!isValidCoordinates(to)) {
+        return null;
+    }
+
+    const { lat, lng } = snapToGrid(to);
+    const params = new URLSearchParams({ api: "1", destination: `${lat},${lng}` });
+
+    return `https://www.google.com/maps/dir/?${params.toString()}`;
+};
+
 /** Shown on connections' maps: not in ghost mode, and updated recently enough. */
 export const isLocationVisible = (
     location: { ghost: boolean; positionUpdatedAt: Date | string },

@@ -15,7 +15,7 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { Coordinates, describeDistance } from "@/lib/location";
+import { Coordinates, describeDistance, directionsUrl } from "@/lib/location";
 
 export interface MapPerson {
   userId: string;
@@ -24,7 +24,7 @@ export interface MapPerson {
   role?: string;
   lat: number;
   lng: number;
-  distanceKm: number | null; 
+  distanceKm: number | null;
   avatarUrl?: string | null;
 }
 
@@ -127,12 +127,25 @@ export default function MapView({ me, people, picking, onPick }: MapViewProps) {
             {person.distanceKm !== null && (
               <p className="m-0 mt-1">{describeDistance(person.distanceKm)}</p>
             )}
-            <Link
-              href={`/messages?c=${person.connectionId}`}
-              className="mt-2 inline-block font-semibold !text-brand"
-            >
-              Message
-            </Link>
+            <p className="m-0 mt-2 flex gap-4">
+              <Link
+                href={`/messages?c=${person.connectionId}`}
+                className="font-semibold !text-brand"
+              >
+                Message
+              </Link>
+              {directionsUrl(person) && (
+                <a
+                  href={directionsUrl(person)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Opens Google Maps to their approximate area"
+                  className="font-semibold !text-brand"
+                >
+                  Directions
+                </a>
+              )}
+            </p>
           </Popup>
         </Circle>
       ))}
