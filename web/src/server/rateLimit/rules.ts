@@ -33,7 +33,15 @@ export const POLICIES = {
     /** New accounts from one IP. */
     registerIp: { scope: "register:ip", limit: 20, windowMs: 60 * MINUTE },
     /** Profile picture uploads by one user. */
-    avatarUser: { scope: "avatar:user", limit: 20, windowMs: 60 * MINUTE }
+    avatarUser: { scope: "avatar:user", limit: 20, windowMs: 60 * MINUTE },
+    /** Blocks and unblocks by one user. */
+    blockUser: { scope: "block:user", limit: 30, windowMs: 60 * MINUTE },
+    /** Reports filed by one user. */
+    reportUser: { scope: "report:user", limit: 10, windowMs: 24 * 60 * MINUTE },
+    /** Delete-account attempts by one user (stops password guessing here). */
+    deleteAccount: { scope: "delete:user", limit: 5, windowMs: 15 * MINUTE },
+    /** Wake-up pings from one IP (each browser sends at most one per 5 minutes). */
+    warmIp: { scope: "warm:ip", limit: 60, windowMs: 15 * MINUTE }
 } satisfies Record<string, RateLimitPolicy>;
 
 export interface RateWindow {

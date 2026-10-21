@@ -29,6 +29,7 @@ import {
 import { useConnectionsChanged, useUnreadChanged } from "@/lib/notifications";
 import { useAdaptivePolling } from "@/lib/usePolling";
 import Avatar from "@/components/Avatar";
+import SafetyActions from "@/components/SafetyActions";
 
 const errorText = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
@@ -88,9 +89,11 @@ function ReadTicks({ seen }: { seen: boolean }) {
 function Thread({
   connection,
   onBack,
+  onBlocked,
 }: {
   connection: ConnectionItem;
   onBack: () => void;
+  onBlocked: () => void;
 }) {
   const conversationPath = `/messages/${connection.id}`;
 
@@ -268,7 +271,7 @@ function Thread({
 
   return (
     <section className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center gap-3 border-b border-line px-3 py-3 sm:px-5">
+      <header className="flex flex-wrap items-center gap-3 border-b border-line px-3 py-3 sm:px-5">
         <button
           type="button"
           onClick={onBack}
@@ -304,6 +307,13 @@ function Thread({
                 "Connected"}
           </p>
         </div>
+        <SafetyActions
+          userId={user.userId}
+          name={user.name}
+          onDone={onBlocked}
+          className="ml-auto shrink-0"
+          panelClassName="basis-full"
+        />
       </header>
 
       <div
@@ -630,6 +640,12 @@ function MessagesView() {
               key={selected.id}
               connection={selected}
               onBack={() => open(null)}
+              onBlocked={() => {
+                setConnections((list) =>
+                  list.filter((item) => item.id !== selected.id),
+                );
+                open(null);
+              }}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">

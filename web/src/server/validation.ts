@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { MESSAGE_MAX_LENGTH } from "@/server/messages/rules";
 import { MATCHERS, RECOMMENDATION_MODES } from "@/server/recommendations/modes";
+import { REPORT_DETAILS_MAX, REPORT_REASONS } from "@/lib/safety";
 
 export const registerSchema = z.object({
     email: z.string().email(),
@@ -98,4 +99,24 @@ export const locationSchema = z.object({
 
 export const ghostModeSchema = z.object({
     ghost: z.boolean()
+});
+
+
+export const blockSchema = z.object({
+    userId: objectId
+});
+
+export const reportSchema = z.object({
+    userId: objectId,
+    reason: z.enum(REPORT_REASONS),
+    details: z.string().trim().max(REPORT_DETAILS_MAX).optional()
+});
+
+export const reportReviewSchema = z.object({
+    status: z.literal("reviewed")
+});
+
+export const deleteAccountSchema = z.object({
+    password: z.string().max(200).optional(),
+    confirm: z.string().max(20).optional()
 });

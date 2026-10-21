@@ -9,6 +9,8 @@ import { prepareAvatar } from "@/lib/avatarImage";
 import Avatar from "@/components/Avatar";
 import Segmented from "@/components/Segmented";
 import OnboardingSteps from "@/components/OnboardingSteps";
+import BlockedPeople from "@/components/BlockedPeople";
+import DeleteAccount from "@/components/DeleteAccount";
 import {
   FormSection,
   FormSkeleton,
@@ -499,6 +501,9 @@ export default function ProfilePage() {
           </div>
         </aside>
       </div>
+
+      {!onboarding && <BlockedPeople />}
+      {!onboarding && <DeleteAccount />}
     </main>
   );
 }

@@ -7,6 +7,7 @@ import { getToken } from "@/lib/auth";
 import type { ConnectionItem, ConnectionsResponse } from "@/lib/connections";
 import Avatar from "@/components/Avatar";
 import SampleTag from "@/components/SampleTag";
+import SafetyActions from "@/components/SafetyActions";
 import {
   refreshNotifications,
   useConnectionsChanged,
@@ -186,6 +187,10 @@ export default function ConnectionsPage() {
     refreshNotifications();
   };
 
+  const reload = () => {
+    void fetchLists().then((result) => applyResult(result));
+  };
+
   const received = (
     <section className="order-1">
       <SectionHeading
@@ -232,6 +237,12 @@ export default function ConnectionsPage() {
                   Decline
                 </button>
               </div>
+              <SafetyActions
+                userId={item.user.userId}
+                name={item.user.name}
+                onDone={reload}
+                className="mt-3"
+              />
             </li>
           ))}
         </ul>
@@ -340,6 +351,14 @@ export default function ConnectionsPage() {
                         Remove
                       </button>
                     </div>
+                  )}
+                  {!confirming && (
+                    <SafetyActions
+                      userId={item.user.userId}
+                      name={item.user.name}
+                      onDone={reload}
+                      className="mt-3"
+                    />
                   )}
                 </div>
               </li>

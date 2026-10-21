@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ConnectionState } from "@/lib/connections";
 import Avatar from "@/components/Avatar";
 import SampleTag from "@/components/SampleTag";
+import SafetyActions from "@/components/SafetyActions";
 
 export interface Recommendation {
   userId: string;
@@ -213,6 +214,7 @@ export default function MatchCard({
   busy,
   error,
   onConnect,
+  onBlocked,
 }: {
   recommendation: Recommendation;
   rank: number;
@@ -221,10 +223,21 @@ export default function MatchCard({
   busy: boolean;
   error?: string;
   onConnect: () => void;
+  onBlocked: () => void;
 }) {
   const { profile, score, breakdown, reasons } = recommendation;
   const delayMs = Math.min(rank - 1, 8) * 70;
   const subtitle = [profile.role, profile.education].filter(Boolean).join(", ");
+
+  const safety = (
+    <div className="mt-3 text-center">
+      <SafetyActions
+        userId={recommendation.userId}
+        name={profile.name}
+        onDone={onBlocked}
+      />
+    </div>
+  );
 
   const identity = (
     <div className="flex items-start gap-4">
@@ -397,6 +410,7 @@ export default function MatchCard({
                 error={error}
                 onConnect={onConnect}
               />
+              {safety}
             </div>
           </div>
         </div>
@@ -412,6 +426,7 @@ export default function MatchCard({
               error={error}
               onConnect={onConnect}
             />
+            {safety}
           </div>
         </>
       )}
