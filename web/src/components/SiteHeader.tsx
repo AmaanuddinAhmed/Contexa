@@ -15,6 +15,7 @@ import {
 } from "@/lib/notifications";
 import { usePolling } from "@/lib/usePolling";
 import Logo from "@/components/Logo";
+import InstallApp from "@/components/InstallApp";
 
 const NAV_LINKS = [
   { href: "/recommendations", label: "Matches" },
@@ -343,14 +344,19 @@ export default function SiteHeader() {
             })}
           </nav>
 
-          <button
-            type="button"
-            onClick={handleLogout}
+          <div
             style={{ animationDelay: `${80 + links.length * 45}ms` }}
-            className="btn btn-quiet mt-8 animate-rise self-start"
+            className="mt-8 flex animate-rise flex-wrap items-start gap-2.5"
           >
-            Log out
-          </button>
+            <InstallApp />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-quiet"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       )}
     </>
