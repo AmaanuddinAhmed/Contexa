@@ -10,6 +10,7 @@ import {
 } from "@/server/recommendations/modes";
 import { getRecommendations } from "@/server/recommendations/service";
 import { buildPool, checkRatings, VariantList } from "./pool";
+import { avatarUrlsFor } from "@/server/avatars/service";
 
 /**
  * People taken from each variant's top list. With four variants the pool is
@@ -31,12 +32,16 @@ export interface FeedbackRoundView {
         skills: string[];
         interests: string[];
         collaborationPreferences: string[];
+        avatarUrl: string | null;
     }[];
 }
 
 const toView = async (round: IFeedbackRound): Promise<FeedbackRoundView> => {
     const ids = round.items.map((item) => item.userId);
-    const profiles = await Profile.find({ userId: { $in: ids } });
+    const [profiles, avatarById] = await Promise.all([
+        Profile.find({ userId: { $in: ids } }),
+        avatarUrlsFor(ids)
+    ]);
     const profileById = new Map(profiles.map((profile) => [profile.userId.toString(), profile]));
 
     return {
@@ -55,7 +60,8 @@ const toView = async (round: IFeedbackRound): Promise<FeedbackRoundView> => {
                 experienceLevel: profile?.experienceLevel,
                 skills: profile?.skills ?? [],
                 interests: profile?.interests ?? [],
-                collaborationPreferences: profile?.collaborationPreferences ?? []
+                collaborationPreferences: profile?.collaborationPreferences ?? [],
+                avatarUrl: avatarById.get(item.userId.toString()) ?? null
             };
         })
     };

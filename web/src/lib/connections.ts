@@ -9,6 +9,7 @@ export interface ConnectionUser {
     skills: string[];
     interests: string[];
     isSample?: boolean;
+    avatarUrl?: string | null;
 }
 
 export interface ConnectionItem {

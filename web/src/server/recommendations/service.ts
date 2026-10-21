@@ -9,7 +9,8 @@ import {
     Matcher,
     RecommendationMode
 } from "./modes";
-import { MatchReason, requestScores, toMatchingContext, toMatchingProfile } from "./scoringClient";
+import { MatchReason, requestScores, toMatchingContext, toMatchingProfile } from "./scoringClient"; 
+import { avatarUrlsFor } from "@/server/avatars/service";
 
 export interface Recommendation {
     userId: string;
@@ -23,6 +24,7 @@ export interface Recommendation {
         interests: string[];
         collaborationPreferences?: string[];
         isSample: boolean;
+        avatarUrl: string | null;
     };
     score: number;
     breakdown: Record<string, number>;
@@ -119,6 +121,8 @@ export const rankForRequester = async (
         candidates.map((candidate) => [candidate.userId, candidate.profile])
     );
 
+    const avatarById = await avatarUrlsFor(scored.map((result) => result.userId));
+
     const recommendations: Recommendation[] = scored.map((result) => {
         const candidateProfile = profileById.get(result.userId)!;
 
@@ -133,7 +137,8 @@ export const rankForRequester = async (
                 skills: candidateProfile.skills,
                 interests: candidateProfile.interests,
                 collaborationPreferences: candidateProfile.collaborationPreferences,
-                isSample: candidateProfile.isSample === true
+                isSample: candidateProfile.isSample === true,
+                avatarUrl: avatarById.get(result.userId) ?? null
             },
             score: result.score,
             breakdown: result.breakdown,

@@ -7,6 +7,7 @@ import { canSeeOthers, distanceKm, isLocationVisible } from "@/lib/location";
 import { Connection } from "@/server/models/Connection";
 import { Profile } from "@/server/models/Profile";
 import { UserLocation } from "@/server/models/UserLocation";
+import { avatarUrlsFor } from "@/server/avatars/service";
 
 /**
  * The caller's own shared area (if any) and the areas of their accepted
@@ -48,12 +49,13 @@ export const GET = async (request: Request) => {
         const now = new Date();
         const canSee = canSeeOthers(mine, now);
 
-        const [locations, profiles] = canSee
+        const [locations, profiles, avatarById] = canSee
             ? await Promise.all([
                 UserLocation.find({ userId: { $in: otherIds } }),
-                Profile.find({ userId: { $in: otherIds } }).select({ userId: 1, name: 1, role: 1 })
+                Profile.find({ userId: { $in: otherIds } }).select({ userId: 1, name: 1, role: 1 }),
+                avatarUrlsFor(otherIds)
             ])
-            : [[], []];
+            : [[], [], new Map<string, string>()];
 
         const profileById = new Map(profiles.map((profile) => [profile.userId.toString(), profile]));
 
@@ -68,6 +70,7 @@ export const GET = async (request: Request) => {
                     connectionId: connectionByUser.get(userId)!,
                     name: profile?.name ?? "CONTEXA user",
                     role: profile?.role,
+                    avatarUrl: avatarById.get(userId) ?? null,
                     lat: location.lat,
                     lng: location.lng,
                     distanceKm: mine ? distanceKm(mine, location) : null,

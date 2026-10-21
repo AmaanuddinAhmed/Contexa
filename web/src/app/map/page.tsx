@@ -396,7 +396,11 @@ export default function MapPage() {
                     className="flex items-center justify-between gap-3 px-4 py-3.5"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <Avatar name={person.name} size="sm" />
+                      <Avatar
+                        src={person.avatarUrl}
+                        name={person.name}
+                        size="sm"
+                      />
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{person.name}</p>
                         <p className="truncate text-sm text-muted">

@@ -8,6 +8,7 @@ import { Connection, IConnection, toRuleState } from "@/server/models/Connection
 import { Profile } from "@/server/models/Profile";
 import { User } from "@/server/models/User";
 import { connectionRequestSchema } from "@/server/validation";
+import { avatarUrlsFor } from "@/server/avatars/service";
 
 // Upper bound on records returned by one listing.
 const MAX_LISTED = 200;
@@ -59,6 +60,8 @@ export const GET = async (request: Request) => {
             profiles.map((profile) => [profile.userId.toString(), profile])
         );
 
+        const avatarById = await avatarUrlsFor(otherIds);
+
         const items = connections.map((connection, index) => {
             const otherId = otherIds[index].toString();
             const profile = profileById.get(otherId);
@@ -78,7 +81,8 @@ export const GET = async (request: Request) => {
                     experienceLevel: profile?.experienceLevel,
                     skills: profile?.skills ?? [],
                     interests: profile?.interests ?? [],
-                    isSample: profile?.isSample === true
+                    isSample: profile?.isSample === true,
+                    avatarUrl: avatarById.get(otherId) ?? null
                 }
             };
         });

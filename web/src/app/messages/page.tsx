@@ -291,7 +291,7 @@ function Thread({
           </svg>
         </button>
 
-        <Avatar name={user.name} size="sm" />
+        <Avatar src={user.avatarUrl} name={user.name} size="sm" />
 
         <div className="min-w-0">
           <p className="truncate font-display text-lg leading-tight font-semibold">
@@ -342,7 +342,7 @@ function Thread({
 
             {messages.length === 0 && !error && (
               <div className="flex flex-col items-center py-14 text-center">
-                <Avatar name={user.name} size="lg" />
+                <Avatar src={user.avatarUrl} name={user.name} size="lg" />
                 <p className="mt-4 font-display text-xl font-semibold">
                   You and {user.name} are connected
                 </p>
@@ -584,7 +584,11 @@ function MessagesView() {
                         isActive ? "bg-brand-soft" : "hover:bg-sunk"
                       }`}
                     >
-                      <Avatar name={item.user.name} size="sm" />
+                      <Avatar
+                        src={item.user.avatarUrl}
+                        name={item.user.name}
+                        size="sm"
+                      />
 
                       <span className="min-w-0 flex-1">
                         <span

@@ -24,7 +24,8 @@ export interface MapPerson {
   role?: string;
   lat: number;
   lng: number;
-  distanceKm: number | null;
+  distanceKm: number | null; 
+  avatarUrl?: string | null;
 }
 
 interface MapViewProps {
