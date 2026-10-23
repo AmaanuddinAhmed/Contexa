@@ -1,8 +1,11 @@
 import "server-only";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
+import { connectDatabase } from "./db";
 import { errorResponse } from "./http";
+import { User } from "./models/User";
 import { extractToken, SESSION_COOKIE, sessionCookieOptions } from "./session";
 
 const getJwtSecret = (): string => {
@@ -62,6 +65,39 @@ export const authenticate = (
     }
 };
 
+
+/**
+ * Like `authenticate`, but also checks that the account still exists and is
+ * active. Used by routes that create or change data, so a token kept from a
+ * deleted account cannot recreate data under that account.
+ */
+export const requireActiveUser = async (
+    request: Request
+): Promise<{ userId: string } | { response: NextResponse }> => {
+    const auth = authenticate(request);
+
+    if ("response" in auth) {
+        return auth;
+    }
+
+    const unavailable = () => ({
+        response: clearSessionCookie(
+            errorResponse(401, "ACCOUNT_UNAVAILABLE", "This account no longer exists.")
+        )
+    });
+
+    if (!mongoose.Types.ObjectId.isValid(auth.userId)) {
+        return unavailable();
+    }
+
+    await connectDatabase();
+
+    if (!(await User.exists({ _id: auth.userId, isActive: true }))) {
+        return unavailable();
+    }
+
+    return auth;
+};
 
 const isProduction = (): boolean => process.env.NODE_ENV === "production";
 

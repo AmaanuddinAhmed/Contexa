@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { authenticate, requireActiveUser } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { snapToGrid } from "@/lib/location";
@@ -19,7 +19,7 @@ const toView = (location: { lat: number; lng: number; ghost: boolean; positionUp
  * stores what it was sent.
  */
 export const PUT = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;
@@ -53,7 +53,7 @@ export const PUT = async (request: Request) => {
 
 /** Turns ghost mode on or off. Body: { ghost: boolean } */
 export const PATCH = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { requireActiveUser } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { Report } from "@/server/models/Report";
@@ -15,7 +15,7 @@ import { reportSchema } from "@/server/validation";
  * Body: { "userId": "...", "reason": "spam" | ..., "details"?: "..." }
  */
 export const POST = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

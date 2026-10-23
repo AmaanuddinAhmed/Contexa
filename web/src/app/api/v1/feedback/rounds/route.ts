@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { requireActiveUser } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { FEEDBACK_ERRORS } from "@/server/feedback/errors";
 import { startOrResumeRound } from "@/server/feedback/service";
@@ -7,7 +7,7 @@ import { errorResponse } from "@/server/http";
 
 /** Starts a blind rating round for the user's current context, or resumes it. */
 export const POST = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

@@ -391,7 +391,7 @@ function Thread({
                           : "rounded-bl-md bg-surface text-ink shadow-[var(--shadow-lift)] ring-1 ring-line/60"
                       }`}
                     >
-                      <p className="text-[0.95rem] leading-6 break-words whitespace-pre-wrap">
+                      <p className="text-[0.95rem] leading-6 wrap-anywhere whitespace-pre-wrap">
                         {message.body}
                       </p>
                       <p
