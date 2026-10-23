@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { authenticate, requireActiveUser } from "@/server/auth";
 import { MAX_AVATAR_BYTES, sniffImageType } from "@/server/avatars/image";
 import { avatarUrlFor } from "@/server/avatars/service";
 import { connectDatabase } from "@/server/db";
@@ -10,7 +10,7 @@ import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 
 /** Sets the caller's picture. Body: the image itself (JPEG, PNG or WebP). */
 export const PUT = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

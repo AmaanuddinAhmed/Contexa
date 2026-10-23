@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { requireActiveUser } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { FEEDBACK_ERRORS } from "@/server/feedback/errors";
 import { submitRatings } from "@/server/feedback/service";
@@ -12,7 +12,7 @@ interface RouteContext {
 
 /** Submits the ratings for a round. Body: { ratings: [{ userId, rating }] } */
 export const POST = async (request: Request, { params }: RouteContext) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

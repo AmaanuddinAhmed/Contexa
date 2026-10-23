@@ -80,7 +80,7 @@ function PersonCard({
         <Avatar src={person.avatarUrl} name={person.name} />
 
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl leading-tight font-semibold">
+          <h2 className="font-display text-xl leading-tight font-semibold wrap-anywhere">
             {person.name}
           </h2>
           {(details || person.experienceLevel) && (

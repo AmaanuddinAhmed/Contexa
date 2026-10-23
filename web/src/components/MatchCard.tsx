@@ -248,7 +248,7 @@ export default function MatchCard({
       />
       <div className="min-w-0 flex-1">
         <h2
-          className={`font-display leading-tight font-semibold ${featured ? "text-2xl sm:text-3xl" : "text-xl"}`}
+          className={`font-display leading-tight font-semibold wrap-anywhere ${featured ? "text-2xl sm:text-3xl" : "text-xl"}`}
         >
           {profile.name}
         </h2>

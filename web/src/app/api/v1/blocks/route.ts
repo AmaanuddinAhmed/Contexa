@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { authenticate, requireActiveUser } from "@/server/auth";
 import { connectDatabase } from "@/server/db";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { Block } from "@/server/models/Block";
@@ -67,7 +67,7 @@ export const GET = async (request: Request) => {
 
 /** Blocks a person. Body: { "userId": "..." }. Also removes any connection between you. */
 export const POST = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

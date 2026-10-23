@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDatabase } from "@/server/db";
-import { authenticate } from "@/server/auth";
+import { authenticate, requireActiveUser } from "@/server/auth";
 import { errorResponse, readJsonBody } from "@/server/http";
 import { Profile } from "@/server/models/Profile";
 import { toMatchTerms } from "@/server/recommendations/terms";
@@ -30,7 +30,7 @@ export const GET = async (request: Request) => {
 };
 
 export const PUT = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;

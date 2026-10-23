@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-import { authenticate } from "@/server/auth";
+import { authenticate, requireActiveUser } from "@/server/auth";
 import { checkNewRequest, toPairKey } from "@/server/connections/rules";
 import { connectDatabase } from "@/server/db";
 import { errorResponse, readJsonBody } from "@/server/http";
@@ -108,7 +108,7 @@ export const GET = async (request: Request) => {
 
 /** Sends a connection request. */
 export const POST = async (request: Request) => {
-    const auth = authenticate(request);
+    const auth = await requireActiveUser(request);
 
     if ("response" in auth) {
         return auth.response;
