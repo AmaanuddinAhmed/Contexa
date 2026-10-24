@@ -9,11 +9,6 @@ interface RouteContext {
     params: Promise<{ userId: string }>;
 }
 
-/**
- * A user's profile picture, for signed-in users only. URLs carry ?v=<version>
- * (see avatarPath), so a versioned response can be cached for a year: a new
- * upload gets a new URL.
- */
 export const GET = async (request: Request, { params }: RouteContext) => {
     const auth = authenticate(request);
 

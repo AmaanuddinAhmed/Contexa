@@ -1,7 +1,3 @@
-/**
- * Unit tests for the evaluation metrics (positive and negative cases).
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
@@ -20,7 +16,6 @@ import {
 const close = (actual: number, expected: number, tolerance = 1e-9) =>
     assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
 
-// Pool of 4 people. A ranks p1, p2; B ranks p3, p4.
 const round: RatedItem[] = [
     { rating: 5, ranks: { A: 1 } },
     { rating: 4, ranks: { A: 2, B: 2 } },
@@ -49,7 +44,6 @@ describe("scoreRound", () => {
     });
 
     it("penalises putting the better person second", () => {
-        // B: gains [1, 3] vs ideal [4, 3].
         const expected = (1 + 3 / Math.log2(3)) / (4 + 3 / Math.log2(3));
         const scores = scoreRound(round, "B")!;
         close(scores.ndcg, expected);

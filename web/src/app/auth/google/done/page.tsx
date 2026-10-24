@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation";
 import { setToken } from "@/lib/auth";
 import { safeNextPath } from "@/lib/paths";
 
-/**
- * Where Google sign-in lands after the server set the session cookie: marks
- * the browser as logged in (the flag the menus read), then moves on.
- */
 export default function GoogleDonePage() {
   const router = useRouter();
 

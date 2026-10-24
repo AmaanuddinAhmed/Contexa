@@ -13,7 +13,6 @@ type Id = string | mongoose.Types.ObjectId;
 const toObjectId = (id: Id) =>
     typeof id === "string" ? new mongoose.Types.ObjectId(id) : id;
 
-/** Everyone `userId` blocked or was blocked by. Call after connectDatabase(). */
 export const hiddenUserIdsFor = async (userId: Id): Promise<mongoose.Types.ObjectId[]> => {
     const me = toObjectId(userId);
     const blocks = await Block.find({ $or: [{ blockerId: me }, { blockedId: me }] })
@@ -29,7 +28,6 @@ export const hiddenUserIdsFor = async (userId: Id): Promise<mongoose.Types.Objec
     ).map((id) => new mongoose.Types.ObjectId(id));
 };
 
-/** True if either person has blocked the other. */
 export const isBlockedEitherWay = async (first: Id, second: Id): Promise<boolean> => {
     const a = toObjectId(first);
     const b = toObjectId(second);
@@ -44,11 +42,6 @@ export const isBlockedEitherWay = async (first: Id, second: Id): Promise<boolean
     );
 };
 
-/**
- * Blocks `blockedId` for `blockerId` (idempotent) and removes any
- * connection record between them, with its conversation.
- * Returns true if a new block was created.
- */
 export const blockUser = async (blockerId: Id, blockedId: Id): Promise<boolean> => {
     const blocker = toObjectId(blockerId);
     const blocked = toObjectId(blockedId);
@@ -71,7 +64,6 @@ export const blockUser = async (blockerId: Id, blockedId: Id): Promise<boolean> 
     return result.upsertedCount > 0;
 };
 
-/** Removes `blockerId`'s block on `blockedId`. Returns false if there was none. */
 export const unblockUser = async (blockerId: Id, blockedId: Id): Promise<boolean> => {
     const result = await Block.deleteOne({
         blockerId: toObjectId(blockerId),
@@ -81,10 +73,6 @@ export const unblockUser = async (blockerId: Id, blockedId: Id): Promise<boolean
     return result.deletedCount > 0;
 };
 
-/**
- * Files a report and blocks the person. The latest messages between them
- * are copied into the report first, because blocking deletes them.
- */
 export const reportUser = async (
     reporterId: Id,
     reportedId: Id,

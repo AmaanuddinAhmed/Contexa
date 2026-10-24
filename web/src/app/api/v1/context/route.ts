@@ -16,8 +16,6 @@ export const GET = async (request: Request) => {
     try {
         await connectDatabase();
 
-        // An expired context is treated as no context, so the user is asked
-        // to set a new one instead of silently getting no recommendations.
         const context = await Context.findOne({
             userId: auth.userId,
             ...currentContextFilter()
@@ -46,7 +44,6 @@ export const POST = async (request: Request) => {
 
         await connectDatabase();
 
-        // Deactivate the user's previous active context.
         await Context.updateMany(
             { userId: auth.userId, isActive: true },
             { $set: { isActive: false } }

@@ -1,15 +1,9 @@
-/**
- * Google sign-in (OAuth 2.0 authorization code flow with PKCE, OpenID
- * Connect). Pure functions only, so they can be unit tested; the routes in
- * app/api/v1/auth/google/ do the network and database work.
- */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 export const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 
-/** Holds state, PKCE verifier and return path between the two requests. */
 export const OAUTH_COOKIE = "contexa_oauth";
 export const OAUTH_COOKIE_PATH = "/api/v1/auth/google";
 export const OAUTH_MAX_AGE_SECONDS = 10 * 60;
@@ -19,15 +13,9 @@ export const CALLBACK_PATH = "/api/v1/auth/google/callback";
 export interface GoogleConfig {
     clientId: string;
     clientSecret: string;
-    /** Absolute redirect URI; must be registered in Google Cloud Console. */
     redirectUri: string;
 }
 
-/**
- * Reads the client id/secret from the environment. APP_URL fixes the base
- * of the redirect URI (so preview deployments still use the registered
- * one); without it the request's own origin is used.
- */
 export const readGoogleConfig = (
     env: Record<string, string | undefined>,
     requestOrigin: string
@@ -44,10 +32,8 @@ export const readGoogleConfig = (
     return { clientId, clientSecret, redirectUri: `${base}${CALLBACK_PATH}` };
 };
 
-/** Random URL-safe string (state and PKCE verifier). */
 export const randomToken = (bytes = 32): string => randomBytes(bytes).toString("base64url");
 
-/** PKCE S256: base64url(sha256(verifier)). */
 export const pkceChallenge = (verifier: string): string =>
     createHash("sha256").update(verifier).digest("base64url");
 
@@ -99,7 +85,6 @@ export const decodeOAuthCookie = (raw: string | null): OAuthCookie | null => {
     }
 };
 
-/** Constant-time comparison, so the state check leaks nothing through timing. */
 export const sameState = (expected: string, received: string | null): boolean => {
     if (!received) return false;
 
@@ -109,7 +94,6 @@ export const sameState = (expected: string, received: string | null): boolean =>
     return a.length === b.length && timingSafeEqual(a, b);
 };
 
-/** The payload of a JWT, without checking its signature. Null if malformed. */
 export const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -131,12 +115,6 @@ export interface GoogleIdentity {
 
 export type ClaimsResult = { identity: GoogleIdentity } | { error: string };
 
-/**
- * Checks the ID token's claims. The signature is not checked: the token
- * comes straight from Google's token endpoint over HTTPS in exchange for a
- * one-time code, which OpenID Connect Core (3.1.3.7) accepts in place of a
- * signature check.
- */
 export const validateGoogleClaims = (
     claims: Record<string, unknown> | null,
     clientId: string,

@@ -1,8 +1,3 @@
-"""
-The real embedding model (all-MiniLM-L6-v2). Skipped unless it is available:
-run `python download_model.py` first, or set SEMANTIC_MODEL_PATH.
-"""
-
 import pytest
 
 from semantic import FastEmbedEmbedder, SemanticTerms

@@ -16,16 +16,9 @@ import {
 export interface IConnection extends Document {
     requesterId: mongoose.Types.ObjectId;
     recipientId: mongoose.Types.ObjectId;
-    /** Sorted "idA:idB": one record per pair, whoever sent the request. */
     pairKey: string;
     status: ConnectionStatus;
     message?: string;
-    /**
- * Where the request came from, for evaluation: which recommendation mode
- * and matcher showed this person, at what rank and score. Absent if sent
- * elsewhere. `matcher` is absent on requests from before semantic
- * matching existed, which were all EXACT.
- */
     source?: {
         mode: RecommendationMode;
         matcher?: Matcher;
@@ -90,18 +83,14 @@ const connectionSchema = new Schema<IConnection>(
     }
 );
 
-// One record per pair; also stops two simultaneous requests creating duplicates.
 connectionSchema.index({ pairKey: 1 }, { unique: true });
-// Listing a user's requests and connections.
 connectionSchema.index({ recipientId: 1, status: 1 });
 connectionSchema.index({ requesterId: 1, status: 1 });
 
-// Reuse the compiled model when Next.js reloads this module in development.
 export const Connection =
     (mongoose.models.Connection as mongoose.Model<IConnection> | undefined) ??
     mongoose.model<IConnection>("Connection", connectionSchema);
 
-/** The fields the connection rules check, with ids as strings. */
 export const toRuleState = (connection: IConnection): ConnectionState => ({
     requesterId: connection.requesterId.toString(),
     recipientId: connection.recipientId.toString(),

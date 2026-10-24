@@ -2,10 +2,6 @@ import { Context } from "../../src/server/models/Context";
 import { Profile } from "../../src/server/models/Profile";
 import { toMatchTerms } from "../../src/server/recommendations/terms";
 
-/**
- * Recomputes the normalised retrieval terms (Profile.matchTerms,
- * Context.needTerms) for every document. Safe to run repeatedly.
- */
 export const backfillMatchTerms = async (): Promise<{
     profiles: number;
     contexts: number;
@@ -25,7 +21,6 @@ export const backfillMatchTerms = async (): Promise<{
                             ])
                         }
                     },
-                    // Keep updatedAt unchanged: this is maintenance, not a user edit.
                     timestamps: false
                 }
             }))

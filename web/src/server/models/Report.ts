@@ -10,16 +10,11 @@ import {
 } from "@/lib/safety";
 import { MESSAGE_MAX_LENGTH } from "@/server/messages/rules";
 
-/** A user's report about another user, for an admin to review. */
 export interface IReport extends Document {
     reporterId: mongoose.Types.ObjectId;
     reportedId: mongoose.Types.ObjectId;
     reason: ReportReason;
     details?: string;
-    /**
-     * The latest messages between the two (if they were connected), copied
-     * at report time, because blocking deletes the conversation.
-     */
     messages: { fromReporter: boolean; body: string; createdAt: Date }[];
     status: ReportStatus;
     reviewedAt?: Date;
@@ -52,9 +47,7 @@ const reportSchema = new Schema<IReport>(
     { timestamps: true }
 );
 
-// Admin list: open reports first, newest first.
 reportSchema.index({ status: 1, createdAt: -1 });
-// One open report per reporter and person.
 reportSchema.index({ reporterId: 1, reportedId: 1, status: 1 });
 
 export const Report =

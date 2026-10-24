@@ -17,7 +17,6 @@ interface BlocksResponse {
   data: { blocked: BlockedPerson[] };
 }
 
-/** People you blocked, with Unblock. Shows nothing until you block someone. */
 export default function BlockedPeople() {
   const [people, setPeople] = useState<BlockedPerson[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -31,7 +30,6 @@ export default function BlockedPeople() {
         if (!cancelled) setPeople(response.data.blocked);
       })
       .catch(() => {
-        // Optional section; leave it hidden.
       });
 
     return () => {

@@ -7,7 +7,6 @@ import { POLICIES } from "@/server/rateLimit/rules";
 import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 import { unblockUser } from "@/server/safety/service";
 
-/** Unblocks a person. They can appear in recommendations again; nothing is restored. */
 export const DELETE = async (
     request: Request,
     { params }: { params: Promise<{ userId: string }> }

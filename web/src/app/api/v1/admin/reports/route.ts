@@ -7,7 +7,6 @@ import { User } from "@/server/models/User";
 
 const MAX_LISTED = 100;
 
-/** Reports for review: open ones first, then newest first. Admin only. */
 export const GET = async (request: Request) => {
     const auth = await requireAdmin(request);
 

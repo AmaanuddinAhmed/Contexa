@@ -1,16 +1,9 @@
-/**
- * A radar sweep over a field of people (dots). Each dot lights up amber at
- * the moment the sweep passes it, so the animation reads as "looking at
- * everyone, one by one". Pure CSS; positions are fixed (seeded), so server
- * and browser render the same markup.
- */
-
 const SWEEP_SECONDS = 2.6;
 
 interface Dot {
-  angle: number; // degrees, clockwise from 12 o'clock
-  radius: number; // 0..1 of the radar radius
-  size: number; // px
+  angle: number;
+  radius: number;
+  size: number;
 }
 
 const seeded = (seed: number) => () => {
@@ -32,10 +25,8 @@ export default function ScanRadar({
   speed = 1,
 }: {
   className?: string;
-  /** 1 = normal; lower is slower (used as an idle hero). */
   speed?: number;
 }) {
-  // Rounded so the server and the browser print identical style strings.
   const period = Math.round((SWEEP_SECONDS / speed) * 100) / 100;
   const round = (value: number) => Math.round(value * 1000) / 1000;
 
@@ -45,7 +36,6 @@ export default function ScanRadar({
       role="img"
       aria-label="Scanning the people you could work with"
     >
-      {/* Rings and crosshair */}
       <svg
         viewBox="0 0 200 200"
         className="absolute inset-0 h-full w-full"
@@ -73,7 +63,6 @@ export default function ScanRadar({
         <line x1="2" y1="100" x2="198" y2="100" stroke="#eef0f5" />
       </svg>
 
-      {/* The sweep: a conic wedge whose leading edge is the bright one. */}
       <div
         className="absolute inset-[1px] overflow-hidden rounded-full"
         aria-hidden="true"
@@ -88,7 +77,6 @@ export default function ScanRadar({
         />
       </div>
 
-      {/* People */}
       {DOTS.map((dot, index) => {
         const radians = (dot.angle * Math.PI) / 180;
         const x = round(50 + Math.sin(radians) * dot.radius * 48);
@@ -113,7 +101,6 @@ export default function ScanRadar({
         );
       })}
 
-      {/* You, at the centre */}
       <span
         aria-hidden="true"
         className="absolute top-1/2 left-1/2 flex h-[15%] w-[15%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-ink text-[0.6rem] font-semibold text-white ring-4 ring-white"

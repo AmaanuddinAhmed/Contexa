@@ -27,10 +27,6 @@ export const VARIANTS = RECOMMENDATION_MODES.flatMap((mode) =>
     MATCHERS.map((matcher) => toVariantId(mode, matcher))
 );
 
-/**
- * The comparisons the evaluation reports, tested variant first. The first
- * one is the research question; the others isolate one change each.
- */
 export const COMPARISONS: [string, string][] = [
     ["CONTEXT_AWARE", "PROFILE_ONLY"],
     ["CONTEXT_AWARE:SEMANTIC", "PROFILE_ONLY:SEMANTIC"],
@@ -38,7 +34,6 @@ export const COMPARISONS: [string, string][] = [
     ["PROFILE_ONLY:SEMANTIC", "PROFILE_ONLY"]
 ];
 
-/** A stored round's items as plain rated items (Mongoose Maps -> objects). */
 const toRatedItems = (round: IFeedbackRound): RatedItem[] =>
     round.items
         .filter((item) => typeof item.rating === "number")
@@ -53,7 +48,6 @@ export interface ConnectionOutcome {
     accepted: number;
     declined: number;
     pending: number;
-    /** accepted / (accepted + declined); NaN while none are answered. */
     acceptanceRate: number;
 }
 
@@ -94,7 +88,6 @@ export const loadDashboard = async (): Promise<Dashboard> => {
     const ratedRounds = completed.map(toRatedItems);
     const syntheticUsers = users.filter((user) => SYNTHETIC_EMAIL.test(user.email)).length;
 
-    // Connection requests by the variant that showed the person.
     const outcomes = new Map<string, ConnectionOutcome>();
 
     for (const connection of connections) {
@@ -143,7 +136,6 @@ export const loadDashboard = async (): Promise<Dashboard> => {
     };
 };
 
-/** Experiment runs, newest first, without their per-user lists. */
 export const listExperiments = async () =>
     Experiment.find().sort({ createdAt: -1 }).limit(20).select({ rows: 0 }).lean();
 
@@ -152,10 +144,6 @@ const csvCell = (value: unknown): string => {
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
-/**
- * Completed feedback as CSV, one row per (round, rated person, variant that
- * ranked them). Pseudonymous: user ids only, no names or emails.
- */
 export const exportFeedbackCsv = async (): Promise<string> => {
     const rounds = await FeedbackRound.find({ status: "completed" }).sort({ completedAt: 1 });
     const lines = [

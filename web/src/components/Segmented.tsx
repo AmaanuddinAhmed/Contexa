@@ -1,9 +1,5 @@
 "use client";
 
-/**
- * A two-or-more option switch with a sliding indicator. Options share the
- * width equally, so the indicator is a simple translate.
- */
 export default function Segmented<T extends string>({
   label,
   options,

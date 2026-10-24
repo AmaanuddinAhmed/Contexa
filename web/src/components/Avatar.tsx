@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-/** Avatar tints, picked from the name so a person keeps theirs. */
 const TINTS = [
   "bg-brand-soft text-brand-ink",
   "bg-signal-soft text-signal-ink",
@@ -31,7 +30,6 @@ export default function Avatar({
   size = "md",
 }: {
   name: string;
-  /** Profile picture URL; initials are shown without one or if it fails to load. */
   src?: string | null;
   size?: "sm" | "md" | "lg";
 }) {
@@ -44,7 +42,6 @@ export default function Avatar({
 
   if (src && src !== failedSrc) {
     return (
-      // Served by our own API at a fixed small size, so next/image adds nothing here.
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}

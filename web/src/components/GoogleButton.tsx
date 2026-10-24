@@ -3,9 +3,7 @@
 import { safeNextPath } from "@/lib/paths";
 import { useQueryParam } from "@/lib/useQueryParam";
 
-/** "Continue with Google": a plain link, since the API route redirects to Google. */
 export default function GoogleButton() {
-  // Carries ?next= through Google and back, like the password form does.
   const next = safeNextPath(useQueryParam("next"));
   const href = next
     ? `/api/v1/auth/google?next=${encodeURIComponent(next)}`
@@ -36,7 +34,6 @@ export default function GoogleButton() {
   );
 }
 
-/** The "or" line between Google and the email form. */
 export function OrDivider() {
   return (
     <div className="my-6 flex items-center gap-3 text-xs font-medium text-faint">

@@ -1,7 +1,3 @@
-/**
- * Unit tests for profile picture rules (positive and negative cases).
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { avatarPath, googlePhotoAtSize, sniffImageType } from "./image";

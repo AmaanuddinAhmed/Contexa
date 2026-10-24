@@ -73,8 +73,6 @@ export const getRecommendations = async (
         throw new Error("PROFILE_NOT_FOUND");
     }
 
-    // The baseline does not use the requester's context, so it is only
-    // required in CONTEXT_AWARE mode.
     if (mode === "CONTEXT_AWARE" && !context) {
         throw new Error("ACTIVE_CONTEXT_NOT_FOUND");
     }
@@ -82,12 +80,6 @@ export const getRecommendations = async (
     return rankForRequester(userObjectId, profile, context, limit, mode, matcher);
 };
 
-/**
- * Stages 1 and 2 for a requester whose profile and context are given rather
- * than loaded. getRecommendations uses it with the stored ones; the
- * experiment runner (scripts/run-experiment.ts) also uses it with a
- * different context, to hold the profile constant while varying context.
- */
 export const rankForRequester = async (
     userObjectId: mongoose.Types.ObjectId,
     profile: IProfile,
@@ -96,11 +88,8 @@ export const rankForRequester = async (
     mode: RecommendationMode,
     matcher: Matcher
 ): Promise<RecommendationResult> => {
-    // Stage 1: retrieval. Note that `mode` is not passed in.
     const { candidates } = await generateCandidates(userObjectId, profile, context);
 
-    // Stage 2: scoring and ranking in the Python service. Retrieval above is
-    // the same for every mode and matcher, so variants rank the same pool.
     const scored = await requestScores({
         mode,
         matcher,
@@ -116,7 +105,6 @@ export const rankForRequester = async (
         }))
     });
 
-    // Attach display fields (name, bio, ...) that the scorer never sees.
     const profileById = new Map(
         candidates.map((candidate) => [candidate.userId, candidate.profile])
     );

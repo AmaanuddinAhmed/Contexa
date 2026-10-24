@@ -1,7 +1,3 @@
-/**
- * Contexa mark: two people (one filled, one outlined) overlapping where
- * they match, plus the amber dot of context.
- */
 export default function Logo({ className = "" }: { className?: string }) {
   return (
     <svg

@@ -1,19 +1,3 @@
-/**
- * Replaces the sample population: 150 people with Indian names, hometowns
- * and languages, each with a profile (marked isSample) and an active context.
- *
- * - Reproducible: the random generator is seeded, so every run creates the
- *   same people (override with SYNTHETIC_SEED=<number>).
- * - Safe: removes only previous sample users (@synthetic.contexa.local) and
- *   what points at them (profiles, contexts, map areas, connections,
- *   messages, open feedback rounds). Real accounts and completed feedback
- *   rounds are never touched.
- * - Sample accounts get a random password each run, so nobody can sign in
- *   as one.
- * - Writes retrieval terms for new users and backfills them for everyone.
- *
- * Run from web/:  npm run db:seed
- */
 import { randomBytes } from "node:crypto";
 import mongoose from "mongoose";
 import { hashPassword } from "../src/server/auth";
@@ -46,8 +30,6 @@ const removePreviousSamples = async (): Promise<number> => {
         UserLocation.deleteMany({ userId: { $in: ids } }),
         Message.deleteMany({ $or: [{ senderId: { $in: ids } }, { recipientId: { $in: ids } }] }),
         Connection.deleteMany({ $or: [{ requesterId: { $in: ids } }, { recipientId: { $in: ids } }] }),
-        // Open rounds would show people who no longer exist. Completed rounds
-        // are evaluation data and are kept.
         FeedbackRound.deleteMany({
             $or: [{ userId: { $in: ids } }, { status: "open", "items.userId": { $in: ids } }]
         })
@@ -62,7 +44,6 @@ const seed = async (): Promise<void> => {
 
     const seedValue = Number(process.env.SYNTHETIC_SEED ?? DEFAULT_SEED);
 
-    // Build all indexes before writing, rather than concurrently with inserts.
     await Promise.all([User.init(), Profile.init(), Context.init()]);
 
     console.log("Removing previous sample users and their data...");
@@ -75,7 +56,6 @@ const seed = async (): Promise<void> => {
 
     const { users, profiles, contexts } = buildSamples(SAMPLE_USER_COUNT, seedValue, passwordHash);
 
-    // Bulk inserts: three round-trips instead of three per user.
     await User.insertMany(users);
     await Profile.insertMany(profiles);
     await Context.insertMany(contexts);

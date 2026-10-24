@@ -2,7 +2,6 @@ import { requireAdmin } from "@/server/admin";
 import { exportFeedbackCsv } from "@/server/evaluation/service";
 import { errorResponse } from "@/server/http";
 
-/** Completed feedback ratings as a CSV download. */
 export const GET = async (request: Request) => {
     try {
         const admin = await requireAdmin(request);

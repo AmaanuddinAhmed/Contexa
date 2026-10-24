@@ -11,7 +11,6 @@ import {
     readGoogleConfig
 } from "@/server/oauth/google";
 
-/** Starts Google sign-in: GET /api/v1/auth/google?next=/somewhere */
 export const GET = (request: Request) => {
     const url = new URL(request.url);
     const config = readGoogleConfig(process.env, url.origin);
@@ -24,8 +23,6 @@ export const GET = (request: Request) => {
     const verifier = randomToken();
     const response = NextResponse.redirect(buildAuthUrl(config, state, pkceChallenge(verifier)));
 
-    // SameSite=Lax, not Strict: Google's redirect back is a cross-site
-    // navigation, and a Strict cookie would not be sent with it.
     response.cookies.set(
         OAUTH_COOKIE,
         encodeOAuthCookie({ state, verifier, next: safeNextPath(url.searchParams.get("next")) }),

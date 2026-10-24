@@ -8,7 +8,6 @@ import { Avatar } from "@/server/models/Avatar";
 import { POLICIES } from "@/server/rateLimit/rules";
 import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 
-/** Sets the caller's picture. Body: the image itself (JPEG, PNG or WebP). */
 export const PUT = async (request: Request) => {
     const auth = await requireActiveUser(request);
 
@@ -16,7 +15,6 @@ export const PUT = async (request: Request) => {
         return auth.response;
     }
 
-    // Refuse obviously large uploads before reading them.
     const declaredLength = Number(request.headers.get("content-length") ?? 0);
     if (declaredLength > MAX_AVATAR_BYTES) {
         return errorResponse(413, "AVATAR_TOO_LARGE", "The picture is too large.");
@@ -67,7 +65,6 @@ export const PUT = async (request: Request) => {
     }
 };
 
-/** Removes the caller's picture; their initials are shown instead. */
 export const DELETE = async (request: Request) => {
     const auth = authenticate(request);
 

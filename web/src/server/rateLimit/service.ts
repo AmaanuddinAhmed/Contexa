@@ -17,11 +17,6 @@ const isDuplicateKeyError = (error: unknown): boolean =>
     error !== null &&
     (error as { code?: number }).code === 11000;
 
-/**
- * Counts one request against the policy and says whether it is allowed.
- * The increment is a single atomic upsert, so parallel requests cannot
- * both slip under the limit. Call after connectDatabase().
- */
 export const consumeRateLimit = async (
     policy: RateLimitPolicy,
     identifier: string
@@ -44,8 +39,6 @@ export const consumeRateLimit = async (
     try {
         counter = await increment();
     } catch (error) {
-        // Two first requests in the same window can race to insert the
-        // counter; the loser retries once and increments the winner's.
         if (!isDuplicateKeyError(error)) throw error;
         counter = await increment();
     }
@@ -53,7 +46,6 @@ export const consumeRateLimit = async (
     return decide(counter?.count ?? 1, policy, window, now);
 };
 
-/** Clears the current window's counter, e.g. after a successful login. */
 export const resetRateLimit = async (
     policy: RateLimitPolicy,
     identifier: string
@@ -62,7 +54,6 @@ export const resetRateLimit = async (
     await RateLimit.deleteOne({ key: bucketKey(policy, identifier, window.start) });
 };
 
-/** 429 with a Retry-After header, in the API's usual error shape. */
 export const tooManyRequests = (
     retryAfterSeconds: number,
     action: string

@@ -15,7 +15,6 @@ import { blockSchema } from "@/server/validation";
 
 const MAX_LISTED = 200;
 
-/** People the caller has blocked, newest first. */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 
@@ -65,7 +64,6 @@ export const GET = async (request: Request) => {
     }
 };
 
-/** Blocks a person. Body: { "userId": "..." }. Also removes any connection between you. */
 export const POST = async (request: Request) => {
     const auth = await requireActiveUser(request);
 

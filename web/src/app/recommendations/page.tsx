@@ -57,7 +57,6 @@ interface RecommendationResponse {
   };
 }
 
-/** Keep the scan on screen long enough to read as a scan, not a flicker. */
 const MIN_SCAN_MS = 1200;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -95,8 +94,6 @@ export default function RecommendationsPage() {
           `/recommendations?limit=10&mode=${mode}&matcher=${matcher}`,
           { token },
         ),
-        // Connection states only drive the buttons, so a failure here
-        // should not hide the recommendations.
         api<ConnectionsResponse>("/connections", { token }).catch(() => null),
       ]);
 
@@ -118,7 +115,6 @@ export default function RecommendationsPage() {
     }
   }, [mode, matcher]);
 
-  // Keeps the Connect buttons current when a request is accepted or declined.
   useConnectionsChanged(() => {
     const token = getToken();
 
@@ -131,7 +127,6 @@ export default function RecommendationsPage() {
         setConnectionStates(toStateByUserId(connections.data)),
       )
       .catch(() => {
-        // The next change retries.
       });
   });
 
@@ -154,7 +149,6 @@ export default function RecommendationsPage() {
         token,
         body: JSON.stringify({
           recipientId: recommendation.userId,
-          // Recorded for evaluation: which variant showed this person, and where.
           source: { mode, matcher, rank, score: recommendation.score },
         }),
       });

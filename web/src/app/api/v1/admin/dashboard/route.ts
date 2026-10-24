@@ -3,7 +3,6 @@ import { requireAdmin } from "@/server/admin";
 import { loadDashboard } from "@/server/evaluation/service";
 import { errorResponse } from "@/server/http";
 
-/** Usage counts, feedback evaluation per variant, and connection outcomes. */
 export const GET = async (request: Request) => {
     try {
         const admin = await requireAdmin(request);

@@ -60,8 +60,6 @@ const profileSchema = new Schema<IProfile>(
             type: [String],
             default: [],
         },
-        // Normalised skills + interests, used only for indexed candidate
-        // retrieval. Removed from API responses by the toJSON transform below.
         matchTerms: {
             type: [String],
             default: [],
@@ -87,10 +85,8 @@ const profileSchema = new Schema<IProfile>(
     }
 );
 
-// Candidate retrieval: public profiles sharing at least one term.
 profileSchema.index({ visibility: 1, matchTerms: 1 });
 
-// Reuse the compiled model when Next.js reloads this module in development.
 export const Profile =
     (mongoose.models.Profile as mongoose.Model<IProfile> | undefined) ??
     mongoose.model<IProfile>("Profile", profileSchema);

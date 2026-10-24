@@ -10,7 +10,6 @@ interface AccountResponse {
   data: { email: string; hasPassword: boolean };
 }
 
-/** "Delete account" section: asks for the password (or DELETE for Google-only accounts). */
 export default function DeleteAccount() {
   const [account, setAccount] = useState<AccountResponse["data"] | null>(null);
   const [open, setOpen] = useState(false);
@@ -28,7 +27,6 @@ export default function DeleteAccount() {
         if (!cancelled) setAccount(response.data);
       })
       .catch(() => {
-        // Without it the section stays hidden; nothing else depends on it.
       });
 
     return () => {
@@ -55,8 +53,6 @@ export default function DeleteAccount() {
         token: getToken() ?? undefined,
         body: JSON.stringify(account.hasPassword ? { password } : { confirm }),
       });
-      // Full page load: clears all page state, and leaves this protected
-      // page before the logged-out guard can send us to /login.
       window.location.replace("/");
       clearNotifications();
       clearToken();

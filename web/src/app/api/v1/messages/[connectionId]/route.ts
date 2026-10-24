@@ -19,10 +19,6 @@ interface RouteContext {
     params: Promise<{ connectionId: string }>;
 }
 
-/**
- * Loads the connection and applies the messaging rules. Returns the
- * connection, or an error response the handler should return as-is.
- */
 const loadConversation = async (
     connectionId: string,
     userId: string
@@ -40,16 +36,6 @@ const loadConversation = async (
     return { connection: connection! };
 };
 
-/**
- * Lists messages in a conversation, oldest first, and marks the caller's
- * unread messages as read.
- *
- *   (no query)       the latest page of history
- *   ?before=<time>   the page before that time (older history)
- *   ?after=<time>    messages at or after that time (polling). Inclusive, so
- *                    a message sent in the same millisecond is never missed;
- *                    the client drops the ones it already has by id.
- */
 export const GET = async (request: Request, { params }: RouteContext) => {
     const auth = authenticate(request);
 
@@ -91,7 +77,6 @@ export const GET = async (request: Request, { params }: RouteContext) => {
                 .sort({ createdAt: 1, _id: 1 })
                 .limit(MESSAGE_POLL_LIMIT);
         } else {
-            // One extra record tells us whether older history exists.
             const page = await Message.find({
                 ...conversation,
                 ...(before ? { createdAt: { $lt: new Date(before) } } : {})
@@ -103,8 +88,6 @@ export const GET = async (request: Request, { params }: RouteContext) => {
             messages = page.slice(0, MESSAGE_PAGE_SIZE).reverse();
         }
 
-        // Opening a conversation reads everything in it. A poll writes only
-        // when it brought something unread, so idle polling stays read-only.
         const openedConversation = !after && !before;
         const hasUnread = messages.some(
             (message) => message.recipientId.toString() === auth.userId && !message.readAt
@@ -117,8 +100,6 @@ export const GET = async (request: Request, { params }: RouteContext) => {
             );
         }
 
-        // Read receipts: the newest of the caller's messages the other person
-        // has read. Every earlier message of theirs counts as seen too.
         const lastSeen = await Message.findOne({
             ...conversation,
             senderId: auth.userId,
@@ -142,7 +123,6 @@ export const GET = async (request: Request, { params }: RouteContext) => {
     }
 };
 
-/** Sends a message. Body: { "body": "..." } */
 export const POST = async (request: Request, { params }: RouteContext) => {
     const auth = authenticate(request);
 

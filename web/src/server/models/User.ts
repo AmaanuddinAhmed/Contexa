@@ -4,10 +4,8 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
     email: string;
-    /** Absent on accounts created with Google sign-in. */
     passwordHash?: string;
     googleId?: string;
-    /** Google profile photo URL, kept for profile pictures. */
     googlePicture?: string;
     role: "user" | "admin";
     isActive: boolean;
@@ -50,7 +48,6 @@ const userSchema = new Schema<IUser>(
     }
 );
 
-// Reuse the compiled model when Next.js reloads this module in development.
 export const User =
     (mongoose.models.User as mongoose.Model<IUser> | undefined) ??
     mongoose.model<IUser>("User", userSchema);

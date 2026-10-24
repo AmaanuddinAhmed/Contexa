@@ -1,7 +1,3 @@
-/**
- * Unit tests for blind feedback pooling and rating checks.
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildPool, checkRatings, shuffle } from "./pool";
@@ -11,7 +7,6 @@ const list = (variant: string, ids: string[]) => ({
     recommendations: ids.map((userId, index) => ({ userId, score: 1 - index / 10 }))
 });
 
-// Repeatable "random" numbers for the shuffle.
 const sequence = (...values: number[]) => {
     let index = 0;
     return () => values[index++ % values.length];

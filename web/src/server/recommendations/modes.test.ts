@@ -1,7 +1,3 @@
-/**
- * Unit tests for variant ids (mode x matcher) used in evaluation records.
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isMatcher, toVariantId } from "./modes";

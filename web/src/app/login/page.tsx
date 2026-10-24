@@ -37,8 +37,6 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Errors sent back by the Google sign-in callback (?error=...), shown
-  // until the email form is used.
   const googleError = useQueryParam("error");
   const [triedEmail, setTriedEmail] = useState(false);
   const shownMessage =
@@ -54,7 +52,6 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // The server sets the httpOnly session cookie on success.
       await api<LoginResponse>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
@@ -65,7 +62,6 @@ export default function LoginPage() {
 
       setToken();
 
-      // Return to the page that sent the user here, if any.
       const next = safeNextPath(
         new URLSearchParams(window.location.search).get("next"),
       );

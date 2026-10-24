@@ -1,7 +1,3 @@
-/**
- * Unit tests for the synthetic experiment summary.
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { contextDonors, ExperimentRow, needCoverage, summariseExperiment } from "./experiment";
@@ -55,7 +51,6 @@ describe("summariseExperiment", () => {
         const rows = [
             row(
                 { A: ["x", "y"], B: ["x", "z"] },
-                // A changes completely with a new context; B does not change.
                 { A: ["p", "q"], B: ["x", "z"] }
             )
         ];

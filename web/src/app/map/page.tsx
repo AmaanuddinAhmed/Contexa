@@ -17,7 +17,6 @@ import {
 import type { MapPerson } from "@/components/MapView";
 import Avatar from "@/components/Avatar";
 
-// Leaflet needs the browser (window), so the map is never server-rendered.
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
   loading: () => <div className="skeleton h-full w-full rounded-none" />,
@@ -40,7 +39,6 @@ type LoadResult = { data: MapData } | { error: string };
 const errorText = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-// Never throws: returns the map data or an error message.
 const fetchMap = async (): Promise<LoadResult> => {
   try {
     const response = await api<{ data: MapData }>("/map", {
@@ -64,7 +62,6 @@ export default function MapPage() {
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState("");
-  // "Stop sharing" asks once more inline before deleting the area.
   const [confirmingStop, setConfirmingStop] = useState(false);
 
   const applyResult = useCallback((result: LoadResult) => {
@@ -91,7 +88,6 @@ export default function MapPage() {
     };
   }, [applyResult]);
 
-  /** Runs a change, then reloads so distances and lists are recomputed. */
   const run = async (change: () => Promise<unknown>, fallback: string) => {
     setBusy(true);
     setError("");
@@ -109,7 +105,6 @@ export default function MapPage() {
   const share = (position: Coordinates) => {
     setPicking(false);
 
-    // Snapped here, so the exact position never leaves the browser.
     return run(
       () =>
         api("/map/location", {
@@ -143,7 +138,6 @@ export default function MapPage() {
           GEOLOCATION_ERRORS[geolocationError.code] ?? GEOLOCATION_ERRORS[2],
         );
       },
-      // Approximate is all that is needed, and it is faster and kinder to batteries.
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
     );
   };

@@ -57,7 +57,6 @@ const emptyProfile: Profile = {
   visibility: "public",
 };
 
-// Must match the levels the matching engine recognises exactly.
 const EXPERIENCE_LEVELS = [
   { value: "Beginner", label: "Beginner" },
   { value: "Intermediate", label: "Intermediate" },
@@ -165,7 +164,6 @@ export default function ProfilePage() {
 
   const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    // Clear the input so choosing the same file again still triggers a change.
     event.target.value = "";
 
     if (!file) {

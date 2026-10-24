@@ -11,14 +11,8 @@ import { connectionRequestSchema } from "@/server/validation";
 import { avatarUrlsFor } from "@/server/avatars/service";
 import { isBlockedEitherWay } from "@/server/safety/service";
 
-// Upper bound on records returned by one listing.
 const MAX_LISTED = 200;
 
-/**
- * Lists the user's pending requests (both directions) and accepted
- * connections, each with the other person's public profile summary.
- * Declined requests are not shown to either person.
- */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 
@@ -106,7 +100,6 @@ export const GET = async (request: Request) => {
     }
 };
 
-/** Sends a connection request. */
 export const POST = async (request: Request) => {
     const auth = await requireActiveUser(request);
 
@@ -122,7 +115,6 @@ export const POST = async (request: Request) => {
 
     const { recipientId, message, source } = result.data;
 
-    // Checked before touching the database.
     const selfCheck = checkNewRequest(auth.userId, recipientId, null);
 
     if (!selfCheck.ok) {
@@ -138,7 +130,6 @@ export const POST = async (request: Request) => {
             Profile.exists({ userId: recipientId, visibility: "public" })
         ]);
 
-        // The recipient sees the requester's name, so a profile is required.
         if (!requesterProfile) {
             return errorResponse(
                 400,
@@ -147,8 +138,6 @@ export const POST = async (request: Request) => {
             );
         }
 
-        // A block either way looks the same as an unavailable person, so the
-        // blocked person cannot tell they were blocked.
         if (!recipientUser || !recipientProfile || await isBlockedEitherWay(auth.userId, recipientId)) {
             return errorResponse(404, "RECIPIENT_NOT_FOUND", "This person is not available.");
         }
@@ -177,8 +166,6 @@ export const POST = async (request: Request) => {
         let connection: IConnection | null;
 
         if (existing) {
-            // Reuse the declined record. The status condition makes this a
-            // no-op if someone else changed the record in the meantime.
             connection = await Connection.findOneAndUpdate(
                 { _id: existing._id, status: "declined" },
                 {
@@ -201,7 +188,6 @@ export const POST = async (request: Request) => {
 
         return NextResponse.json({ success: true, data: { connection } }, { status: 201 });
     } catch (error) {
-        // Unique pairKey index: two requests for the same pair at once.
         if ((error as { code?: number }).code === 11000) {
             return errorResponse(409, "CONNECTION_CHANGED", "Please refresh and try again.");
         }

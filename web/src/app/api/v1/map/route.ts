@@ -9,12 +9,6 @@ import { Profile } from "@/server/models/Profile";
 import { UserLocation } from "@/server/models/UserLocation";
 import { avatarUrlsFor } from "@/server/avatars/service";
 
-/**
- * The caller's own shared area (if any) and the areas of their accepted
- * connections who share one, are not in ghost mode, and updated it within
- * MAX_LOCATION_AGE_DAYS. Visibility is mutual: a caller who is not sharing,
- * is in ghost mode, or whose area has expired gets nobody back.
- */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 

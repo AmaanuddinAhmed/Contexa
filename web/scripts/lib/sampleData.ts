@@ -1,14 +1,5 @@
-/**
- * Vocabulary for the sample population created by scripts/seed.ts.
- *
- * People are built from a region (names, hometown, language) and a persona
- * (role, skills, interests, needs, goals). Each persona's needs are other
- * personas' skills, so the sample population complements itself.
- */
-
 export interface NameGroup {
     weight: number;
-    /** Overrides the region's languages for this group. */
     languages?: string[];
     male: string[];
     female: string[];
@@ -230,7 +221,6 @@ export const REGIONS: Region[] = [
     }
 ];
 
-/** Where people in Bengaluru say they live. */
 export const LOCALITIES = [
     "Banashankari", "Hosakerehalli", "RR Nagar", "Kengeri", "Jayanagar", "JP Nagar", "BTM Layout",
     "HSR Layout", "Koramangala", "Indiranagar", "Whitefield", "Marathahalli", "Bellandur",
@@ -267,10 +257,6 @@ export interface Persona {
     bios: { student: string[]; working: string[] };
 }
 
-/*
- * Bio placeholders: {locality}, {hometown}, {college}, {years} ({years} in
- * working bios only). Kept short and uneven: people rarely write polished bios.
- */
 export const PERSONAS: Persona[] = [
     {
         key: "fullstack",

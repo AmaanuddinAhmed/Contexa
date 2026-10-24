@@ -1,7 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import mongoose from "mongoose";
 
-/** Loads .env / .env.local exactly as Next.js does, then connects. */
 export const connectForScript = async (): Promise<void> => {
     loadEnvConfig(process.cwd());
 

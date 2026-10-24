@@ -1,5 +1,3 @@
-// Shapes returned by GET /api/v1/connections, shared by the pages that use it.
-
 export interface ConnectionUser {
     userId: string;
     name: string;
@@ -31,7 +29,6 @@ export interface ConnectionsResponse {
     };
 }
 
-/** How the current user relates to another user, for buttons and badges. */
 export type ConnectionState = "none" | "outgoing" | "incoming" | "connected";
 
 export const toStateByUserId = (

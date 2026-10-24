@@ -1,10 +1,3 @@
-/**
- * Gives an account access to the admin dashboard (/admin), or takes it away.
- *
- * Run from web/:
- *   npm run admin:grant -- you@example.com
- *   npm run admin:grant -- you@example.com --revoke
- */
 import mongoose from "mongoose";
 import { User } from "../src/server/models/User";
 import { connectForScript } from "./lib/database";

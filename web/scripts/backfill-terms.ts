@@ -1,7 +1,3 @@
-/**
- * Recomputes retrieval terms for all existing profiles and contexts.
- * Run from web/:  npm run db:backfill-terms
- */
 import mongoose from "mongoose";
 import { connectForScript } from "./lib/database";
 import { backfillMatchTerms } from "./lib/backfillMatchTerms";

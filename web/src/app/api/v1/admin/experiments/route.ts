@@ -3,7 +3,6 @@ import { requireAdmin } from "@/server/admin";
 import { listExperiments } from "@/server/evaluation/service";
 import { errorResponse } from "@/server/http";
 
-/** Synthetic experiment runs (scripts/run-experiment.ts), newest first. */
 export const GET = async (request: Request) => {
     try {
         const admin = await requireAdmin(request);

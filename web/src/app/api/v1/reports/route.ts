@@ -10,10 +10,6 @@ import { checkSafetyTarget } from "@/lib/safety";
 import { reportUser } from "@/server/safety/service";
 import { reportSchema } from "@/server/validation";
 
-/**
- * Reports a person and blocks them.
- * Body: { "userId": "...", "reason": "spam" | ..., "details"?: "..." }
- */
 export const POST = async (request: Request) => {
     const auth = await requireActiveUser(request);
 

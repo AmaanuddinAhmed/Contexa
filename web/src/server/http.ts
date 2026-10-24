@@ -14,7 +14,6 @@ export const errorResponse = (
         { status }
     );
 
-/** Parses a JSON body; returns undefined when the body is missing or malformed. */
 export const readJsonBody = async (request: Request): Promise<unknown> => {
     try {
         return await request.json();
