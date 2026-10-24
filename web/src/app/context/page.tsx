@@ -38,10 +38,6 @@ const INTERACTION_OPTIONS = [
   { value: "Either", label: "Either" },
 ] as const;
 
-/**
- * The context-aware weights, for the explainer only. They mirror
- * CONTEXT_WEIGHTS in recommendation-service/matching.py; update both together.
- */
 const WEIGHTS = [
   { label: "Covering each other’s needs", value: 45, className: "bg-signal" },
   { label: "Profile similarity", value: 30, className: "bg-brand" },
@@ -53,13 +49,11 @@ const WEIGHTS = [
   },
 ];
 
-// <input type="date"> works with local "YYYY-MM-DD" strings.
 const toDateInputValue = (date: Date): string => {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-// A context stays valid until the end of the chosen day (local time).
 const endOfDayIso = (dateValue: string): string =>
   new Date(`${dateValue}T23:59:59`).toISOString();
 
@@ -146,7 +140,6 @@ export default function ContextPage() {
           availability,
           situation,
           interactionPreference,
-          // Omitted when empty: the context then has no expiry.
           ...(validUntil ? { validUntil: endOfDayIso(validUntil) } : {}),
         }),
       });
@@ -166,7 +159,6 @@ export default function ContextPage() {
     }
   };
 
-  // Any edit hides the old "saved" confirmation.
   const edit =
     <T,>(setter: (value: T) => void) =>
     (value: T) => {

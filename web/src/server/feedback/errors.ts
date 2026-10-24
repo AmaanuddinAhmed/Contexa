@@ -1,6 +1,5 @@
 import "server-only";
 
-/** Error codes thrown by server/feedback/service.ts -> [HTTP status, message]. */
 export const FEEDBACK_ERRORS: Record<string, [number, string]> = {
     INVALID_USER_ID: [400, "Invalid user identifier."],
     PROFILE_NOT_FOUND: [404, "Create your profile before rating matches."],

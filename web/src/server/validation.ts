@@ -53,11 +53,9 @@ const objectId = z.string().regex(/^[a-f0-9]{24}$/i);
 export const connectionRequestSchema = z.object({
     recipientId: objectId,
     message: z.string().trim().max(300).optional(),
-    // Set when the request is sent from the recommendations page.
     source: z
         .object({
             mode: z.enum(RECOMMENDATION_MODES),
-            // Optional: requests sent before semantic matching existed omit it.
             matcher: z.enum(MATCHERS).optional(),
             rank: z.number().int().min(1).max(50),
             score: z.number().min(0).max(1)
@@ -85,8 +83,6 @@ export const messageSchema = z.object({
     body: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH)
 });
 
-// Message timestamps as returned by the API (ISO 8601). `after` polls for
-// newer messages; `before` loads an older page of history.
 export const messageQuerySchema = z
     .object({
         after: z.string().datetime().optional(),

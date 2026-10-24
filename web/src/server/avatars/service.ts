@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import { Avatar } from "@/server/models/Avatar";
 import { avatarPath, googlePhotoAtSize, MAX_AVATAR_BYTES, sniffImageType } from "./image";
 
-/** Picture URLs for a set of users, by user id. Users without one are absent. */
 export const avatarUrlsFor = async (
     userIds: (string | mongoose.Types.ObjectId)[]
 ): Promise<Map<string, string>> => {
@@ -27,10 +26,6 @@ export const avatarUrlsFor = async (
 export const avatarUrlFor = async (userId: string): Promise<string | null> =>
     (await avatarUrlsFor([userId])).get(userId) ?? null;
 
-/**
- * Copies the Google account photo as the user's picture, unless they already
- * have one. Best effort: sign-in never fails because of it.
- */
 export const copyGooglePhotoIfMissing = async (userId: string, pictureUrl: string): Promise<void> => {
     try {
         if (await Avatar.exists({ userId })) {
@@ -39,7 +34,6 @@ export const copyGooglePhotoIfMissing = async (userId: string, pictureUrl: strin
 
         const url = new URL(googlePhotoAtSize(pictureUrl));
 
-        // Only Google's photo host, so this can never fetch arbitrary URLs.
         if (url.protocol !== "https:" || !url.hostname.endsWith(".googleusercontent.com")) {
             return;
         }

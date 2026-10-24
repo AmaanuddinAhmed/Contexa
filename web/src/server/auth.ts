@@ -36,10 +36,6 @@ export const comparePassword = (
     passwordHash: string
 ): Promise<boolean> => bcrypt.compare(password, passwordHash);
 
-/**
- * Replaces the Express `authenticate` middleware. Returns the user id, or a
- * 401 response the route handler should return as-is.
- */
 export const authenticate = (
     request: Request
 ): { userId: string } | { response: NextResponse } => {
@@ -66,11 +62,6 @@ export const authenticate = (
 };
 
 
-/**
- * Like `authenticate`, but also checks that the account still exists and is
- * active. Used by routes that create or change data, so a token kept from a
- * deleted account cannot recreate data under that account.
- */
 export const requireActiveUser = async (
     request: Request
 ): Promise<{ userId: string } | { response: NextResponse }> => {
@@ -101,13 +92,11 @@ export const requireActiveUser = async (
 
 const isProduction = (): boolean => process.env.NODE_ENV === "production";
 
-/** Puts a new login token in the httpOnly session cookie. */
 export const setSessionCookie = (response: NextResponse, userId: string): NextResponse => {
     response.cookies.set(SESSION_COOKIE, generateToken(userId), sessionCookieOptions(isProduction()));
     return response;
 };
 
-/** Deletes the session cookie (same attributes, expired). */
 export const clearSessionCookie = (response: NextResponse): NextResponse => {
     response.cookies.set(SESSION_COOKIE, "", sessionCookieOptions(isProduction(), 0));
     return response;

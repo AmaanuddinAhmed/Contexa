@@ -1,10 +1,3 @@
-"""
-SEMANTIC matcher: positive and negative cases, and its relationship to EXACT.
-
-Uses the deterministic FakeEmbedder (tests/conftest.py), so no model is needed.
-tests/test_semantic_model.py checks the real model when it is installed.
-"""
-
 import json
 from pathlib import Path
 
@@ -29,7 +22,6 @@ RANKING_CASES = FIXTURES["rankingCases"]
 
 
 def terms_for(*sides, embedder=None):
-    """A SemanticTerms over everything in the given profiles and contexts."""
     vocabulary = []
 
     for side in sides:
@@ -56,8 +48,6 @@ def context(need=(), activity="Building a software project", availability="Weeke
     return {"need": list(need), "activity": activity, "availability": availability,
             "interactionPreference": preference}
 
-
-# ---------- term similarity ----------
 
 def test_identical_terms_match_fully_ignoring_case_and_spaces():
     terms = terms_for({"profile": profile(["React"])})
@@ -88,8 +78,6 @@ def test_vocabulary_is_embedded_once_per_request():
     assert embedder.calls == 1
 
 
-# ---------- factors ----------
-
 def test_need_is_fulfilled_by_a_synonym():
     terms = terms_for({"context": context(["React"])}, {"profile": profile(["React.js"])})
     assert EXACT.need_fulfillment(["React"], profile(["React.js"])) == 0
@@ -99,9 +87,7 @@ def test_need_is_fulfilled_by_a_synonym():
 def test_soft_jaccard_counts_synonyms_as_partial_overlap():
     terms = terms_for({"profile": profile(["React", "Docker"])},
                       {"profile": profile(["React.js", "Docker"])})
-    # Exact: {docker} / {react, docker, react.js} = 1/3.
     assert EXACT.array_similarity(["React", "Docker"], ["React.js", "Docker"]) == pytest.approx(1 / 3)
-    # Semantic: overlap 1.9 (Docker 1 + React~React.js 0.9) out of 4 - 1.9.
     assert terms.array_similarity(["React", "Docker"], ["React.js", "Docker"]) == pytest.approx(1.9 / 2.1)
 
 
@@ -118,11 +104,8 @@ def test_phrase_similarity_helps_free_text():
     assert terms.text_similarity("Evenings", "After 6pm") == pytest.approx(0.9)
 
 
-# ---------- relationship to EXACT ----------
-
 @pytest.mark.parametrize("case", PAIR_CASES, ids=[c["name"] for c in PAIR_CASES])
 def test_semantic_equals_exact_when_no_terms_are_similar(case):
-    """With a model that sees no synonyms, SEMANTIC reproduces EXACT exactly."""
     terms = case_terms(case, FakeEmbedder(synonyms=[], weakly_related=[]))
 
     assert calculate_profile_similarity(case["profileA"], case["profileB"], terms) == \
@@ -136,7 +119,6 @@ def test_semantic_equals_exact_when_no_terms_are_similar(case):
 
 @pytest.mark.parametrize("case", PAIR_CASES, ids=[c["name"] for c in PAIR_CASES])
 def test_semantic_never_scores_below_exact(case):
-    """Every factor, and the total, is at least its EXACT value."""
     terms = case_terms(case)
     args = (case["profileA"], case["profileB"], case["contextA"], case["contextB"])
 
@@ -179,8 +161,6 @@ def test_a_synonym_match_can_change_the_ranking():
     assert exact[0]["userId"] == "unrelated"
     assert semantic[0]["userId"] == "synonym"
 
-
-# ---------- explanations ----------
 
 def reasons_by_code(reasons):
     return {reason["code"]: reason for reason in reasons}
@@ -239,8 +219,6 @@ def test_semantic_reason_appears_exactly_when_its_factor_contributes(case):
                          ("collaborationPreferences", "SHARED_COLLABORATION")]:
         assert (profile_breakdown[factor] > 0) == (code in codes), factor
 
-
-# ---------- model loading ----------
 
 def test_missing_model_fails_fast_without_downloading(tmp_path, monkeypatch):
     import time

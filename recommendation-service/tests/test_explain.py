@@ -1,5 +1,3 @@
-"""Match explanations: positive, negative, and consistency with the scores."""
-
 import json
 from pathlib import Path
 
@@ -30,8 +28,6 @@ def codes(reasons):
 def by_code(reasons):
     return {reason["code"]: reason for reason in reasons}
 
-
-# ---------- positive cases ----------
 
 def test_complementary_pair_explains_both_directions_first():
     reasons = explain_match("CONTEXT_AWARE", PYTHON_DEV, REACT_DEV, NEEDS_REACT, NEEDS_PYTHON)
@@ -69,7 +65,6 @@ def test_matching_ignores_case_and_spaces_but_keeps_spelling():
         explain_match("CONTEXT_AWARE", PYTHON_DEV, profile, context, NEEDS_PYTHON)
     )
 
-    # Listed once, in the requester's own spelling.
     assert reasons["THEY_MEET_YOUR_NEEDS"]["items"] == ["react"]
 
 
@@ -97,8 +92,6 @@ def test_long_lists_are_shortened_in_text_but_complete_in_items():
     assert reason["items"] == skills
     assert reason["text"].endswith(f"+{len(skills) - MAX_ITEMS_IN_TEXT} more")
 
-
-# ---------- negative cases ----------
 
 def test_no_overlap_gives_no_reasons():
     first = {"skills": ["Python"], "interests": [], "experienceLevel": "Beginner"}
@@ -131,8 +124,6 @@ def test_context_aware_without_requester_context_is_rejected():
     with pytest.raises(ValueError, match="ACTIVE_CONTEXT_NOT_FOUND"):
         explain_match("CONTEXT_AWARE", PYTHON_DEV, REACT_DEV, None, NEEDS_PYTHON)
 
-
-# ---------- consistency: a reason appears exactly when its factor > 0 ----------
 
 PROFILE_FACTOR_CODES = {
     "skills": {"SHARED_SKILLS"},

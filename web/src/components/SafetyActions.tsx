@@ -14,10 +14,6 @@ import {
 
 type Step = "closed" | "choose" | "block" | "report";
 
-/**
- * "Block or report" link that opens an inline panel. Calls `onDone` after
- * a successful block or report, so the page can hide the person.
- */
 export default function SafetyActions({
   userId,
   name,
@@ -29,7 +25,6 @@ export default function SafetyActions({
   name: string;
   onDone: () => void;
   className?: string;
-  /** Classes for the opened panel; defaults to `className`. */
   panelClassName?: string;
 }) {
   const [step, setStep] = useState<Step>("closed");

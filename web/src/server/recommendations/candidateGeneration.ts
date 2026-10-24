@@ -6,19 +6,6 @@ import { User } from "@/server/models/User";
 import { hiddenUserIdsFor } from "@/server/safety/service";
 import { toMatchTerms } from "./terms";
 
-/**
- * Stage 1 of recommendation: candidate generation (retrieval).
- *
- * MODE-NEUTRAL BY CONSTRUCTION: this module takes no recommendation mode.
- * PROFILE_ONLY and CONTEXT_AWARE therefore always rank the same pool, so any
- * difference between them comes from scoring, not from who was retrieved.
- *
- * BOUNDED: returns at most CANDIDATE_POOL_LIMIT candidates, so the work in
- * stage 2 (scoring, in the Python service) does not grow with the user base.
- */
-
-// The Python service accepts at most 500 candidates per request
-// (MAX_CANDIDATES in recommendation-service/main.py).
 const SCORER_MAX_CANDIDATES = 500;
 
 export const getCandidatePoolLimit = (): number => {
@@ -31,8 +18,6 @@ export const getCandidatePoolLimit = (): number => {
     return Math.min(configured, SCORER_MAX_CANDIDATES);
 };
 
-// How many index matches each retrieval channel may examine before
-// re-ranking. Bounds retrieval cost independently of the number of users.
 const getScanLimit = (): number => {
     const configured = Number(process.env.CANDIDATE_SCAN_LIMIT);
     return Number.isInteger(configured) && configured > 0 ? configured : 5000;
@@ -46,11 +31,9 @@ export interface Candidate {
 
 export interface CandidatePool {
     candidates: Candidate[];
-    /** "full": everyone eligible was scored. "retrieval": indexed channels. */
     strategy: "full" | "retrieval";
 }
 
-/** Public profiles other than the requester's and anyone blocked either way. */
 interface BaseProfileFilter {
     userId: { $nin: mongoose.Types.ObjectId[] };
     visibility: "public";
@@ -71,11 +54,9 @@ const uniqueIds = (ids: mongoose.Types.ObjectId[]): mongoose.Types.ObjectId[] =>
     });
 };
 
-/** Number of distinct `terms` contained in `values`. */
 const countShared = (terms: Set<string>, values: readonly string[] = []): number =>
     new Set(values.filter((value) => terms.has(value))).size;
 
-/** Keeps the `count` highest-relevance ids (stable for equal relevance). */
 const topByRelevance = (
     items: { userId: mongoose.Types.ObjectId; relevance: number }[],
     count: number
@@ -86,21 +67,6 @@ const topByRelevance = (
         .slice(0, count)
         .map((item) => item.userId);
 
-/**
- * Picks which candidate user ids to consider when the eligible population is
- * larger than the limit. A cascade: each channel uses an index to fetch at
- * most `scanLimit` matches, re-ranks them with a cheap relevance measure that
- * mirrors one component of the scorer, and keeps the best:
- *
- *  - similarity (half the slots): Jaccard overlap of skill/interest terms,
- *    like the profile-similarity score
- *  - complementarity (other half), interleaving two directions:
- *      A -> B: share of the requester's needs the candidate covers
- *              (like needFulfillmentA)
- *      B -> A: share of the candidate's needs the requester covers
- *              (like needFulfillmentB)
- *  - fill: most recently updated public profiles, if slots remain
- */
 const retrieveCandidateIds = async (
     baseFilter: BaseProfileFilter,
     requesterId: mongoose.Types.ObjectId,
@@ -171,7 +137,6 @@ const retrieveCandidateIds = async (
         half
     );
 
-    // Interleave the two complementarity directions so both are represented.
     const complementarityIds: mongoose.Types.ObjectId[] = [];
 
     for (
@@ -216,7 +181,6 @@ export const generateCandidates = async (
         visibility: "public"
     };
 
-    // Public profile count is an upper bound on the eligible population.
     const publicProfileCount = await Profile.countDocuments(baseFilter);
 
     const strategy: CandidatePool["strategy"] =
@@ -237,7 +201,6 @@ export const generateCandidates = async (
                     ...baseFilter,
                     userId: { $in: ids }
                 });
-                // Keep the retrieval order (find() does not preserve $in order).
                 const order = new Map(ids.map((id, index) => [id.toString(), index]));
                 return profiles.sort(
                     (first, second) =>
@@ -248,7 +211,6 @@ export const generateCandidates = async (
 
     const candidateUserIds = candidateProfiles.map((profile) => profile.userId);
 
-    // Eligibility: the account is active and has a current (active, unexpired) context.
     const [activeUserIds, candidateContexts] = await Promise.all([
         User.find({ _id: { $in: candidateUserIds }, isActive: true }).distinct("_id"),
         Context.find({ userId: { $in: candidateUserIds }, ...currentContextFilter() })

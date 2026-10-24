@@ -10,7 +10,6 @@ interface RouteContext {
     params: Promise<{ id: string }>;
 }
 
-/** Submits the ratings for a round. Body: { ratings: [{ userId, rating }] } */
 export const POST = async (request: Request, { params }: RouteContext) => {
     const auth = await requireActiveUser(request);
 

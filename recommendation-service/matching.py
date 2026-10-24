@@ -1,14 +1,3 @@
-"""
-CONTEXA matching engine.
-
-Exact port of the original TypeScript services
-(profileMatchingService.ts and contextMatchingService.ts). Scores must stay
-identical to the TypeScript version; tests/test_parity.py checks this against
-golden fixtures in data/parity/.
-
-Pure functions only: no database, no I/O.
-"""
-
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
@@ -16,14 +5,10 @@ from typing import Literal, Optional, Protocol, TypedDict
 
 Mode = Literal["PROFILE_ONLY", "CONTEXT_AWARE"]
 
-# How two terms (skills, interests, needs, ...) are judged to match.
-# EXACT: identical after trim + lowercase (this module).
-# SEMANTIC: also similar in meaning, via embeddings (semantic.py).
 Matcher = Literal["EXACT", "SEMANTIC"]
 
 EXPERIENCE_LEVELS = {"Beginner": 1, "Intermediate": 2, "Advanced": 3}
 
-# Weights (unchanged from the TypeScript implementation).
 PROFILE_WEIGHTS = {
     "skills": 0.4,
     "interests": 0.3,
@@ -55,13 +40,6 @@ class ContextData(TypedDict):
 
 
 def round4(value: float) -> float:
-    """
-    Matches JavaScript's Number(value.toFixed(4)).
-
-    Python's round() rounds exact ties to even (0.03125 -> 0.0312), while
-    toFixed rounds them up (0.03125 -> 0.0313). Decimal(value) uses the
-    exact binary value, as toFixed does.
-    """
     return float(
         Decimal(value).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
     )
@@ -72,8 +50,6 @@ def _normalize(value: str) -> str:
 
 
 def array_similarity(first: list[str], second: list[str]) -> float:
-    """Jaccard similarity of two lists after normalisation."""
-    # Emptiness is checked on the raw lists, as in the TypeScript version.
     if not first or not second:
         return 0.0
 
@@ -87,7 +63,6 @@ def array_similarity(first: list[str], second: list[str]) -> float:
 
 
 def text_similarity(first: str, second: str) -> float:
-    """Word-overlap (Jaccard) similarity of two free-text values."""
     return array_similarity(_normalize(first).split(), _normalize(second).split())
 
 
@@ -115,10 +90,6 @@ def interaction_similarity(first: str, second: str) -> float:
 
 
 def need_fulfillment(needs: list[str], profile: ProfileData) -> float:
-    """
-    Directional: the fraction of `needs` covered by the other person's
-    skills or interests.
-    """
     if not needs:
         return 0.0
 
@@ -127,18 +98,12 @@ def need_fulfillment(needs: list[str], profile: ProfileData) -> float:
         for item in [*profile.get("skills", []), *profile.get("interests", [])]
     }
 
-    # Duplicate needs count individually, as in the TypeScript version.
     fulfilled = sum(1 for need in needs if _normalize(need) in capabilities)
 
     return fulfilled / len(needs)
 
 
 class TermMatcher(Protocol):
-    """
-    The three term-level comparisons the scores use. Everything else (weights,
-    experience, interaction preference) is shared, so EXACT and SEMANTIC
-    differ only in how terms are compared.
-    """
 
     def array_similarity(self, first: list[str], second: list[str]) -> float: ...
 
@@ -148,7 +113,6 @@ class TermMatcher(Protocol):
 
 
 class ExactTerms:
-    """The original exact-match comparisons, unchanged (parity-tested)."""
 
     array_similarity = staticmethod(array_similarity)
     text_similarity = staticmethod(text_similarity)
@@ -161,7 +125,6 @@ EXACT = ExactTerms()
 def calculate_profile_similarity(
     first: ProfileData, second: ProfileData, terms: TermMatcher = EXACT
 ) -> dict:
-    """PROFILE_ONLY baseline score."""
     skills = terms.array_similarity(first.get("skills", []), second.get("skills", []))
     interests = terms.array_similarity(
         first.get("interests", []), second.get("interests", [])
@@ -174,7 +137,6 @@ def calculate_profile_similarity(
         second.get("collaborationPreferences") or [],
     )
 
-    # Same operation order as the TypeScript version, so floats match exactly.
     score = (
         skills * PROFILE_WEIGHTS["skills"]
         + interests * PROFILE_WEIGHTS["interests"]
@@ -200,8 +162,6 @@ def calculate_context_compatibility(
     context_b: ContextData,
     terms: TermMatcher = EXACT,
 ) -> dict:
-    """CONTEXT_AWARE score: profile + context + directional complementarity."""
-    # Uses the already-rounded profile score, as the TypeScript version does.
     profile = calculate_profile_similarity(profile_a, profile_b, terms)["score"]
 
     need = terms.array_similarity(context_a["need"], context_b["need"])
@@ -213,7 +173,6 @@ def calculate_context_compatibility(
         context_a["interactionPreference"], context_b["interactionPreference"]
     )
 
-    # A -> B: how well B covers A's needs. B -> A: how well A covers B's needs.
     need_fulfillment_a = terms.need_fulfillment(context_a["need"], profile_b)
     need_fulfillment_b = terms.need_fulfillment(context_b["need"], profile_a)
     complementarity = (need_fulfillment_a + need_fulfillment_b) / 2
@@ -249,7 +208,6 @@ def score_candidate(
     candidate_context: ContextData,
     terms: TermMatcher = EXACT,
 ) -> dict:
-    """Only this step differs between modes."""
     if mode == "PROFILE_ONLY":
         return calculate_profile_similarity(requester_profile, candidate_profile, terms)
 
@@ -269,10 +227,6 @@ def rank_candidates(
     limit: int,
     terms: TermMatcher = EXACT,
 ) -> list[dict]:
-    """
-    Scores every candidate and returns the top `limit`, highest first.
-    Ties keep input order (stable sort), matching the TypeScript version.
-    """
     results = []
 
     for candidate in candidates:

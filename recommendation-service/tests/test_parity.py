@@ -1,8 +1,3 @@
-"""
-Parity: the Python matching engine must reproduce the original TypeScript
-scores exactly (no tolerance). Golden fixtures: data/parity/matching_parity.json
-"""
-
 import json
 from pathlib import Path
 
@@ -48,11 +43,9 @@ def test_ranking_matches_typescript(case, mode):
         candidates=case["candidates"],
         limit=case["limit"],
     )
-    # Same people, same order (including ties), same scores.
     assert ranked == case["expected"][mode]
 
 
 def test_round4_matches_javascript_tofixed_on_ties():
-    # Python's round(0.03125, 4) gives 0.0312; JavaScript's toFixed gives 0.0313.
     assert round4(0.03125) == 0.0313
     assert round4(1 / 3) == 0.3333

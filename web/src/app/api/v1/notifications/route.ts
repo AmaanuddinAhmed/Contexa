@@ -7,11 +7,6 @@ import { Connection } from "@/server/models/Connection";
 import { Message } from "@/server/models/Message";
 import { toConnectionsVersion } from "@/server/notifications/version";
 
-/**
- * Everything the header badges need, in one small poll:
- * unread messages, connection requests waiting on the caller, and a version
- * string that changes when any of the caller's connections changes.
- */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 

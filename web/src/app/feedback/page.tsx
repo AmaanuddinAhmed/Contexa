@@ -40,7 +40,6 @@ const RATING_LABELS: Record<number, string> = {
 
 type LoadResult = { round: Round } | { error: string };
 
-// Never throws: returns the round or an error message.
 const startRound = async (): Promise<LoadResult> => {
   try {
     const response = await api<RoundResponse>("/feedback/rounds", {

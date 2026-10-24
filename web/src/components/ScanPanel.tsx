@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import ScanRadar from "@/components/ScanRadar";
 
-/**
- * Shown while recommendations load. The steps mirror the real pipeline
- * (candidate generation, scoring, explanations); their timing is only
- * indicative, since the API answers in one response.
- */
 const STEP_STARTS_MS = [0, 650, 1400];
-/** After this long, the free-tier scoring service is probably waking up. */
 const SLOW_AFTER_MS = 6000;
 
 export default function ScanPanel({ contextAware }: { contextAware: boolean }) {

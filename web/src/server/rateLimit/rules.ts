@@ -1,52 +1,24 @@
-/**
- * Rate-limit rules: which bucket a request falls in and whether it is over
- * the limit.
- *
- * Pure functions only (no database), so the rules can be unit tested on
- * their own; service.ts stores the counters in MongoDB.
- *
- * Fixed windows: time is cut into blocks of `windowMs`, and each
- * (policy, identifier, window) has one counter. In-memory counters would not
- * work on Vercel, where each request may run on a different instance, so the
- * counters live in the database instead.
- */
-
 export interface RateLimitPolicy {
-    /** Prefix for the counter key, e.g. "login:ip". */
     scope: string;
-    /** Requests allowed per window; request number limit + 1 is refused. */
     limit: number;
     windowMs: number;
 }
 
 const MINUTE = 60 * 1000;
 
-/**
- * Limits are generous per IP because classmates on campus Wi-Fi share one
- * public IP; the per-email limit is the one that stops password guessing.
- */
 export const POLICIES = {
-    /** All login attempts from one IP. */
     loginIp: { scope: "login:ip", limit: 50, windowMs: 15 * MINUTE },
-    /** Login attempts for one account (cleared after a successful login). */
     loginEmail: { scope: "login:email", limit: 5, windowMs: 15 * MINUTE },
-    /** New accounts from one IP. */
     registerIp: { scope: "register:ip", limit: 20, windowMs: 60 * MINUTE },
-    /** Profile picture uploads by one user. */
     avatarUser: { scope: "avatar:user", limit: 20, windowMs: 60 * MINUTE },
-    /** Blocks and unblocks by one user. */
     blockUser: { scope: "block:user", limit: 30, windowMs: 60 * MINUTE },
-    /** Reports filed by one user. */
     reportUser: { scope: "report:user", limit: 10, windowMs: 24 * 60 * MINUTE },
-    /** Delete-account attempts by one user (stops password guessing here). */
     deleteAccount: { scope: "delete:user", limit: 5, windowMs: 15 * MINUTE },
-    /** Wake-up pings from one IP (each browser sends at most one per 5 minutes). */
     warmIp: { scope: "warm:ip", limit: 60, windowMs: 15 * MINUTE }
 } satisfies Record<string, RateLimitPolicy>;
 
 export interface RateWindow {
     start: number;
-    /** When this window ends and the counter starts again (ms since epoch). */
     resetAt: number;
 }
 
@@ -65,7 +37,6 @@ export type RateLimitDecision =
     | { allowed: true; remaining: number }
     | { allowed: false; retryAfterSeconds: number };
 
-/** `count` is the counter after this request was added. */
 export const decide = (
     count: number,
     policy: RateLimitPolicy,
@@ -82,10 +53,6 @@ export const decide = (
     };
 };
 
-/**
- * The caller's IP. Vercel sets x-forwarded-for (client first) and
- * x-real-ip; locally neither may be present, so all requests share "unknown".
- */
 export const clientIp = (headers: Headers): string => {
     const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
     if (forwarded) return forwarded;
@@ -96,10 +63,8 @@ export const clientIp = (headers: Headers): string => {
     return "unknown";
 };
 
-/** "Amaan@Example.com " and "amaan@example.com" share one counter. */
 export const normaliseEmail = (email: string): string => email.trim().toLowerCase();
 
-/** "14 minutes" / "1 minute" / "30 seconds", for the error message. */
 export const formatRetryAfter = (seconds: number): string => {
     if (seconds < 60) {
         return `${seconds} second${seconds === 1 ? "" : "s"}`;

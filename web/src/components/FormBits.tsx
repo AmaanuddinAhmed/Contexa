@@ -2,17 +2,12 @@
 
 import { useSyncExternalStore } from "react";
 
-/** Splits "React, Figma ,  " into ["React", "Figma"], as the pages save it. */
 export const splitTerms = (value: string): string[] =>
   value
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 
-/**
- * True when the page was opened with ?onboarding=1 (set after sign-up).
- * Reads the URL in the browser only, so prerendering never touches window.
- */
 export const useOnboarding = (): boolean =>
   useSyncExternalStore(
     () => () => {},
@@ -20,10 +15,6 @@ export const useOnboarding = (): boolean =>
     () => false,
   );
 
-/**
- * A comma-separated text field that shows the terms it will save as chips,
- * so people see exactly how their list is split before saving.
- */
 export function TermsField({
   id,
   label,
@@ -84,7 +75,6 @@ export function TermsField({
   );
 }
 
-/** A row of pill-shaped radio options (replaces a short <select>). */
 export function PillChoice<T extends string>({
   name,
   label,
@@ -134,7 +124,6 @@ export function PillChoice<T extends string>({
   );
 }
 
-/** A titled group of fields inside a form panel. */
 export function FormSection({
   title,
   description,
@@ -157,7 +146,6 @@ export function FormSection({
   );
 }
 
-/** Placeholder blocks while a form loads. */
 export function FormSkeleton() {
   return (
     <div className="panel space-y-6" aria-busy="true" aria-label="Loading">

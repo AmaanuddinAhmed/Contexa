@@ -15,7 +15,6 @@ interface RouteContext {
 const notFound = () =>
     errorResponse(404, "CONNECTION_NOT_FOUND", "Connection request not found.");
 
-/** Accepts or declines a request. Body: { "action": "accept" | "decline" } */
 export const PATCH = async (request: Request, { params }: RouteContext) => {
     const auth = authenticate(request);
 
@@ -50,7 +49,6 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
             return errorResponse(rule.status, rule.code, rule.message);
         }
 
-        // Conditional update: answers only a request that is still pending.
         const updated = await Connection.findOneAndUpdate(
             { _id: connection._id, recipientId: auth.userId, status: "pending" },
             {
@@ -73,7 +71,6 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
     }
 };
 
-/** Cancels a pending request (requester) or removes a connection (either person). */
 export const DELETE = async (request: Request, { params }: RouteContext) => {
     const auth = authenticate(request);
 
@@ -102,7 +99,6 @@ export const DELETE = async (request: Request, { params }: RouteContext) => {
             return errorResponse(rule.status, rule.code, rule.message);
         }
 
-        // Only delete the record in the state the rule was checked against.
         const deleted = await Connection.deleteOne({
             _id: connection._id,
             status: connection.status
@@ -112,7 +108,6 @@ export const DELETE = async (request: Request, { params }: RouteContext) => {
             return errorResponse(409, "CONNECTION_CHANGED", "Please refresh and try again.");
         }
 
-        // A conversation exists only while two people are connected.
         if (connection.status === "accepted") {
             await Message.deleteMany({ connectionId: connection._id });
         }

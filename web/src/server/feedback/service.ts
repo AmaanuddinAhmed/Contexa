@@ -12,13 +12,8 @@ import { getRecommendations } from "@/server/recommendations/service";
 import { buildPool, checkRatings, VariantList } from "./pool";
 import { avatarUrlsFor } from "@/server/avatars/service";
 
-/**
- * People taken from each variant's top list. With four variants the pool is
- * K to 4K people; in practice the lists overlap heavily (see README).
- */
 export const FEEDBACK_K = 5;
 
-/** What the rater sees: profiles only. No scores, reasons, ranks or variants. */
 export interface FeedbackRoundView {
     roundId: string;
     status: "open" | "completed";
@@ -47,7 +42,6 @@ const toView = async (round: IFeedbackRound): Promise<FeedbackRoundView> => {
     return {
         roundId: String(round._id),
         status: round.status,
-        // Stored order is the shuffled order.
         people: round.items.map((item) => {
             const profile = profileById.get(item.userId.toString());
 
@@ -67,11 +61,6 @@ const toView = async (round: IFeedbackRound): Promise<FeedbackRoundView> => {
     };
 };
 
-/**
- * Returns the user's open round for their current context, or creates one.
- * Throws ACTIVE_CONTEXT_NOT_FOUND, ALREADY_RATED, NO_RECOMMENDATIONS, or the
- * errors of getRecommendations (PROFILE_NOT_FOUND, ...).
- */
 export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundView> => {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
         throw new Error("INVALID_USER_ID");
@@ -95,8 +84,6 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
         return toView(existing);
     }
 
-    // Same user, same context, same candidate pool; only the variant
-    // (mode x matcher) differs.
     const variants = RECOMMENDATION_MODES.flatMap((mode) =>
         MATCHERS.map((matcher) => ({ mode, matcher }))
     );
@@ -109,8 +96,6 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
         }))
     );
 
-    // The EXACT variants are required. SEMANTIC ones are added when the
-    // embedding model is available, so a model problem never blocks rating.
     const lists: VariantList[] = [];
 
     results.forEach((result, index) => {
@@ -144,7 +129,6 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
 
         return toView(round);
     } catch (error) {
-        // Two tabs started a round at once: use the one that won.
         if ((error as { code?: number }).code === 11000) {
             const winner = await FeedbackRound.findOne({ userId, contextId: context._id });
 
@@ -157,10 +141,6 @@ export const startOrResumeRound = async (userId: string): Promise<FeedbackRoundV
     }
 };
 
-/**
- * Saves the ratings and closes the round. Throws ROUND_NOT_FOUND,
- * ALREADY_SUBMITTED, or a rating-check code (INCOMPLETE_RATINGS, ...).
- */
 export const submitRatings = async (
     userId: string,
     roundId: string,
@@ -170,7 +150,6 @@ export const submitRatings = async (
         throw new Error("ROUND_NOT_FOUND");
     }
 
-    // Filtering by userId means other users' rounds are simply "not found".
     const round = await FeedbackRound.findOne({ _id: roundId, userId });
 
     if (!round) {
@@ -199,7 +178,6 @@ export const submitRatings = async (
         rating: ratingById.get(item.userId.toString())
     }));
 
-    // Conditional on "open", so a double submit cannot overwrite ratings.
     const updated = await FeedbackRound.findOneAndUpdate(
         { _id: round._id, userId, status: "open" },
         { $set: { items, status: "completed", completedAt: new Date() } },

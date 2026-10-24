@@ -2,7 +2,6 @@ import "server-only";
 
 import mongoose, { Document, Schema } from "mongoose";
 
-/** `blockerId` blocked `blockedId`. Hides each from the other (see safety/rules.ts). */
 export interface IBlock extends Document {
     blockerId: mongoose.Types.ObjectId;
     blockedId: mongoose.Types.ObjectId;
@@ -17,9 +16,7 @@ const blockSchema = new Schema<IBlock>(
     { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-// One block per direction; also serves "who did I block" (newest first).
 blockSchema.index({ blockerId: 1, blockedId: 1 }, { unique: true });
-// "Who blocked me".
 blockSchema.index({ blockedId: 1 });
 
 export const Block =

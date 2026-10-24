@@ -27,10 +27,6 @@ const fill = (template: string, values: Record<string, string>): string =>
 
 const slug = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
-/**
- * Builds the sample users, profiles and contexts in memory. Same seed, same
- * people. No database access, so the output can be inspected on its own.
- */
 export const buildSamples = (count: number, seedValue: number, passwordHash: string) => {
     faker.seed(seedValue);
 
@@ -114,10 +110,8 @@ export const buildSamples = (count: number, seedValue: number, passwordHash: str
             isSample: true
         });
 
-        // A few people never fill in a context, like real users.
         if (chance(0.92)) {
             const need = pickSome(persona.needs, 1, 3).filter((item) => !skills.includes(item));
-            // People who moved to Bengaluru sometimes want to learn Kannada.
             if (region.key !== "karnataka" && chance(0.12)) {
                 need.push("Kannada");
             }

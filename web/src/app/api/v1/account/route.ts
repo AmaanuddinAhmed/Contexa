@@ -10,7 +10,6 @@ import { POLICIES } from "@/server/rateLimit/rules";
 import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 import { deleteAccountSchema } from "@/server/validation";
 
-/** What the delete form needs: whether to ask for a password or for DELETE. */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 
@@ -41,10 +40,6 @@ export const GET = async (request: Request) => {
     }
 };
 
-/**
- * Permanently deletes the caller's account and logs them out.
- * Body: { "password": "..." } or, for Google-only accounts, { "confirm": "DELETE" }.
- */
 export const DELETE = async (request: Request) => {
     const auth = authenticate(request);
 

@@ -1,19 +1,12 @@
 "use client";
 
-/** Same as AVATAR_SIZE on the server. */
 const SIZE = 256;
 
-/** Largest file we try to read in the browser (phone photos are 2–8 MB). */
 export const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 
 const toBlob = (canvas: HTMLCanvasElement, type: string): Promise<Blob | null> =>
     new Promise((resolve) => canvas.toBlob(resolve, type, 0.85));
 
-/**
- * Crops a photo to a centred square and shrinks it to 256 × 256, so only a
- * small image is uploaded. WebP where the browser can encode it (Chrome,
- * Firefox, Edge), JPEG otherwise (older Safari).
- */
 export const prepareAvatar = async (file: File): Promise<Blob> => {
     if (!file.type.startsWith("image/")) {
         throw new Error("Choose an image file.");
@@ -25,7 +18,6 @@ export const prepareAvatar = async (file: File): Promise<Blob> => {
 
     let bitmap: ImageBitmap;
     try {
-        // Honours the photo's orientation, so phone pictures are not sideways.
         bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     } catch {
         throw new Error("That image could not be opened. Try a JPEG or PNG.");

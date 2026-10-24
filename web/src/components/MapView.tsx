@@ -31,17 +31,13 @@ export interface MapPerson {
 interface MapViewProps {
   me: (Coordinates & { ghost: boolean }) | null;
   people: MapPerson[];
-  /** When true, a click on the map sets the user's area. */
   picking: boolean;
   onPick: (position: Coordinates) => void;
 }
 
-// Areas are drawn as circles about the size of a grid cell, so nobody
-// reads a precise position into them.
 const AREA_RADIUS_M = 800;
 const INDIA: [number, number] = [21, 78];
 
-/** Fits the view to everyone shown, once per change in who is shown. */
 function FitToPeople({ me, people }: Pick<MapViewProps, "me" | "people">) {
   const map = useMap();
   const key = [
@@ -63,7 +59,6 @@ function FitToPeople({ me, people }: Pick<MapViewProps, "me" | "people">) {
         maxZoom: 13,
       });
     }
-    // `key` captures every position that matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, key]);
 

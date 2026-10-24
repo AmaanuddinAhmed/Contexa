@@ -5,10 +5,6 @@ import { connectDatabase } from "@/server/db";
 import { errorResponse } from "@/server/http";
 import { Message } from "@/server/models/Message";
 
-/**
- * Unread message counts for the caller: the total (header badge) and per
- * conversation, keyed by connection id (conversation list).
- */
 export const GET = async (request: Request) => {
     const auth = authenticate(request);
 

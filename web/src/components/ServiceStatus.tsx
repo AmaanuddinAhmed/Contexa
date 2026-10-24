@@ -8,7 +8,6 @@ interface Status {
   ms: number;
 }
 
-/** Admin card: check (and wake) the recommendation service before a demo. */
 export default function ServiceStatus() {
   const [status, setStatus] = useState<Status | null>(null);
   const [checking, setChecking] = useState(false);

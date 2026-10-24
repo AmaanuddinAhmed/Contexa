@@ -6,13 +6,8 @@ import { consumeRateLimit, tooManyRequests } from "@/server/rateLimit/service";
 import { pingRecommendationService } from "@/server/recommendations/warm";
 
 export const dynamic = "force-dynamic";
-// Waking the free-tier service can take about a minute.
 export const maxDuration = 60;
 
-/**
- * Wakes the recommendation service and says how long it took. Needs no
- * login (the home and login pages call it too) and returns nothing private.
- */
 export const POST = async (request: Request) => {
     try {
         await connectDatabase();

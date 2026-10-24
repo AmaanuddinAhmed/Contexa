@@ -12,19 +12,6 @@ import { Report } from "@/server/models/Report";
 import { User } from "@/server/models/User";
 import { UserLocation } from "@/server/models/UserLocation";
 
-/**
- * Deletes an account and everything that belongs to it.
- *
- * Kept, without anything that identifies the person:
- *  - completed feedback rounds: their rater id is replaced by one random id
- *    (the same for all their rounds), so the experiment keeps its ratings
- *    and rater count. Open rounds are deleted.
- *  - reports filed ABOUT this person (moderation record); reports they
- *    filed are deleted.
- *
- * The account is deactivated first, so it disappears from matches straight
- * away even if a later step fails.
- */
 export const deleteAccount = async (userId: string): Promise<void> => {
     const id = new mongoose.Types.ObjectId(userId);
 

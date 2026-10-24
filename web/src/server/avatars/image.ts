@@ -1,19 +1,9 @@
-/**
- * Profile picture rules. Pure functions only, so they can be unit tested.
- *
- * The browser resizes photos to AVATAR_SIZE before uploading; the server
- * still checks the size and the file's real type (from its first bytes,
- * not the Content-Type header) before storing anything.
- */
-
 export const AVATAR_SIZE = 256;
 
-/** A 256 px WebP or JPEG is usually 10–40 KB; this leaves room. */
 export const MAX_AVATAR_BYTES = 300 * 1024;
 
 export type AvatarType = "image/jpeg" | "image/png" | "image/webp";
 
-/** The image type from the file's first bytes, or null if not one we accept. */
 export const sniffImageType = (bytes: Uint8Array): AvatarType | null => {
     if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
         return "image/jpeg";
@@ -35,13 +25,8 @@ export const sniffImageType = (bytes: Uint8Array): AvatarType | null => {
     return null;
 };
 
-/** Where a stored picture is served. `version` changes on every upload, for caching. */
 export const avatarPath = (userId: string, version: Date): string =>
     `/api/v1/avatars/${userId}?v=${version.getTime()}`;
 
-/**
- * Google photo URLs end in a size option such as "=s96-c"; ask for one at
- * our size instead of the small default.
- */
 export const googlePhotoAtSize = (url: string, size = AVATAR_SIZE): string =>
     /=s\d+(-c)?$/.test(url) ? url.replace(/=s\d+(-c)?$/, `=s${size}-c`) : `${url}=s${size}-c`;

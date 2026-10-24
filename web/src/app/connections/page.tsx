@@ -22,7 +22,6 @@ interface LoadResult {
   error?: string;
 }
 
-// Never throws: returns the lists or an error message.
 const fetchLists = async (): Promise<LoadResult> => {
   try {
     const response = await api<ConnectionsResponse>("/connections", {
@@ -128,13 +127,9 @@ export default function ConnectionsPage() {
   const [lists, setLists] = useState<Lists>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  // Id of the record an action is running on, to disable its buttons.
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Connection waiting for a second click on "Remove".
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
-  // `actionError` (from a failed accept/decline/remove) takes priority over
-  // the result of the reload that follows it.
   const applyResult = (result: LoadResult, actionError = "") => {
     if (result.lists) {
       setLists(result.lists);
@@ -157,7 +152,6 @@ export default function ConnectionsPage() {
     };
   }, []);
 
-  // Someone sent, accepted or declined a request: show it without a refresh.
   useConnectionsChanged(() => {
     void fetchLists().then((result) => applyResult(result));
   });
@@ -181,7 +175,6 @@ export default function ConnectionsPage() {
         error instanceof Error ? error.message : "Something went wrong.";
     }
 
-    // Reload either way, so the page shows the real current state.
     applyResult(await fetchLists(), actionError);
     setBusyId(null);
     refreshNotifications();

@@ -1,9 +1,6 @@
-"""Shared test helpers."""
-
 import numpy as np
 import pytest
 
-# Terms that the fake model treats as near-synonyms (cosine 0.9 within a group).
 SYNONYMS = [
     {"ai", "machine learning", "artificial intelligence"},
     {"ui", "ui design", "design", "figma", "ui/ux"},
@@ -12,17 +9,10 @@ SYNONYMS = [
     {"node.js", "backend"},
     {"evenings", "weekday evenings", "after 6pm"},
 ]
-# Related but below the 0.65 threshold (cosine 0.5): must NOT match.
 WEAKLY_RELATED = [{"python", "java"}]
 
 
 class FakeEmbedder:
-    """
-    Deterministic stand-in for the real model. Every text gets its own
-    direction; texts in the same group also share a group direction, which
-    sets their cosine similarity (0.9 for SYNONYMS, 0.5 for WEAKLY_RELATED).
-    Everything else is orthogonal (similarity 0).
-    """
 
     DIMENSIONS = 8192
 

@@ -21,10 +21,7 @@ export interface Recommendation {
     avatarUrl?: string | null;
   };
   score: number;
-  // PROFILE_ONLY returns skills/interests/experience/collaborationPreferences;
-  // CONTEXT_AWARE returns profile/need/activity/availability/... factors.
   breakdown: Record<string, number>;
-  // Why this person was recommended, strongest factor first.
   reasons: { code: string; text: string; items: string[] }[];
 }
 
@@ -108,7 +105,6 @@ function ScoreRing({
   );
 }
 
-/** Need reasons are directional: who helps whom. */
 function ReasonIcon({ code }: { code: string }) {
   if (code === "THEY_MEET_YOUR_NEEDS" || code === "YOU_MEET_THEIR_NEEDS") {
     const towardYou = code === "THEY_MEET_YOUR_NEEDS";

@@ -23,8 +23,6 @@ export const POST = async (request: Request) => {
 
         await connectDatabase();
 
-        // Checked before the password, so a blocked caller learns nothing
-        // about whether a guess was right.
         const ipLimit = await consumeRateLimit(POLICIES.loginIp, clientIp(request.headers));
         if (!ipLimit.allowed) {
             return tooManyRequests(ipLimit.retryAfterSeconds, "login attempts");
@@ -56,11 +54,8 @@ export const POST = async (request: Request) => {
             return errorResponse(401, "INVALID_CREDENTIALS", "Invalid email or password.");
         }
 
-        // A successful login clears this account's failed attempts.
         await resetRateLimit(POLICIES.loginEmail, emailKey);
 
-        // The token goes only in the httpOnly cookie, never in the body,
-        // so page scripts never see it.
         return setSessionCookie(
             NextResponse.json({
                 success: true,

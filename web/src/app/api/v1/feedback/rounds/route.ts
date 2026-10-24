@@ -5,7 +5,6 @@ import { FEEDBACK_ERRORS } from "@/server/feedback/errors";
 import { startOrResumeRound } from "@/server/feedback/service";
 import { errorResponse } from "@/server/http";
 
-/** Starts a blind rating round for the user's current context, or resumes it. */
 export const POST = async (request: Request) => {
     const auth = await requireActiveUser(request);
 

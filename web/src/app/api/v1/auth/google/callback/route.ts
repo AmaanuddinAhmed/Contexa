@@ -15,17 +15,11 @@ import {
 import { readCookie } from "@/server/session";
 import { copyGooglePhotoIfMissing } from "@/server/avatars/service";
 
-/**
- * Google redirects here with ?code&state. Checks the state, swaps the code
- * for an ID token, then signs in the matching account: by Google id, else by
- * the same (Google-verified) email, else a new account.
- */
 export const GET = async (request: Request) => {
     const url = new URL(request.url);
 
     const finish = (path: string) => {
         const response = NextResponse.redirect(new URL(path, url.origin));
-        // The state cookie is single-use.
         response.cookies.set(OAUTH_COOKIE, "", { path: OAUTH_COOKIE_PATH, maxAge: 0 });
         return response;
     };
@@ -34,7 +28,6 @@ export const GET = async (request: Request) => {
     const config = readGoogleConfig(process.env, url.origin);
     if (!config) return fail("google_unavailable");
 
-    // The user pressed Cancel on Google's screen.
     if (url.searchParams.get("error")) return fail("google_cancelled");
 
     const saved = decodeOAuthCookie(readCookie(request.headers.get("cookie"), OAUTH_COOKIE));
@@ -86,7 +79,6 @@ export const GET = async (request: Request) => {
             user = await User.findOne({ email });
 
             if (user) {
-                // Same email, verified by Google: link it to this account.
                 user.googleId = googleId;
             } else {
                 user = new User({ email, googleId });

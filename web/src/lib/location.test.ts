@@ -1,7 +1,3 @@
-/**
- * Unit tests for approximate locations (positive and negative cases).
- * Run from web/:  npm test
- */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {

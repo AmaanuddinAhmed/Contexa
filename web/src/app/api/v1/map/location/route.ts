@@ -13,11 +13,6 @@ const toView = (location: { lat: number; lng: number; ghost: boolean; positionUp
     positionUpdatedAt: location.positionUpdatedAt
 });
 
-/**
- * Shares (or moves) the caller's approximate area. Body: { lat, lng }.
- * The browser already snaps to the grid; the server snaps again and never
- * stores what it was sent.
- */
 export const PUT = async (request: Request) => {
     const auth = await requireActiveUser(request);
 
@@ -51,7 +46,6 @@ export const PUT = async (request: Request) => {
     }
 };
 
-/** Turns ghost mode on or off. Body: { ghost: boolean } */
 export const PATCH = async (request: Request) => {
     const auth = await requireActiveUser(request);
 
@@ -68,7 +62,6 @@ export const PATCH = async (request: Request) => {
     try {
         await connectDatabase();
 
-        // Does not touch positionUpdatedAt: hiding is not moving.
         const location = await UserLocation.findOneAndUpdate(
             { userId: auth.userId },
             { $set: { ghost: result.data.ghost } },
@@ -86,7 +79,6 @@ export const PATCH = async (request: Request) => {
     }
 };
 
-/** Stops sharing: deletes the stored area. */
 export const DELETE = async (request: Request) => {
     const auth = authenticate(request);
 

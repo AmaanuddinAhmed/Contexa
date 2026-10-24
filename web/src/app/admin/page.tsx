@@ -6,8 +6,6 @@ import { getToken } from "@/lib/auth";
 import { REPORT_REASON_LABELS, ReportReason } from "@/lib/safety";
 import ServiceStatus from "@/components/ServiceStatus";
 
-// ---------- shapes returned by /api/v1/admin/* ----------
-
 interface VariantSummary {
   variant: string;
   rounds: number;
@@ -79,9 +77,6 @@ interface ExperimentRun {
   completedAt?: string;
 }
 
-// ---------- formatting ----------
-
-// NaN becomes null in JSON; both mean "no data".
 const isNumber = (value: number | null | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
@@ -113,8 +108,6 @@ const OVERVIEW_TILES: { key: string; label: string }[] = [
   { key: "roundsCompleted", label: "Rating rounds done" },
   { key: "raters", label: "People who rated" },
 ];
-
-// ---------- small pieces ----------
 
 function Section({
   title,
@@ -201,7 +194,6 @@ function Table({
   );
 }
 
-/** A 0-1 value as a number with a thin bar behind it (one series, no colour coding). */
 function Meter({ value, label }: { value: number | null; label: string }) {
   return (
     <div className="flex items-center justify-end gap-3" title={label}>
@@ -317,8 +309,6 @@ function ExperimentDetails({ run }: { run: ExperimentRun }) {
   );
 }
 
-// ---------- page ----------
-
 type Loaded =
   | { status: "loading" }
   | { status: "error"; message: string }
@@ -342,7 +332,6 @@ interface ReportItem {
   messages: { fromReporter: boolean; body: string; createdAt: string }[];
 }
 
-/** User reports (block/report feature), open ones first. */
 function ReportsPanel() {
   const [reports, setReports] = useState<ReportItem[] | null>(null);
   const [open, setOpen] = useState(0);
@@ -546,7 +535,6 @@ export default function AdminPage() {
     setExportError("");
 
     try {
-      // The session cookie authenticates the download.
       const response = await fetch("/api/v1/admin/export", {
         credentials: "same-origin",
       });

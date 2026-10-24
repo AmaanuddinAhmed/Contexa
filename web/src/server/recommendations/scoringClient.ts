@@ -3,13 +3,6 @@ import { IContext } from "@/server/models/Context";
 import { IProfile } from "@/server/models/Profile";
 import type { Matcher, RecommendationMode } from "./modes";
 
-/**
- * Stage 2 (scoring + ranking) runs in the stateless Python recommendation
- * service. It receives only the fields the matching engine reads.
- */
-
-// A free-tier host can take up to about a minute to wake an idle service,
-// so the deployed app raises this via RECOMMENDATION_SERVICE_TIMEOUT_MS.
 export const getRecommendationServiceTimeoutMs = (): number => {
     const configured = Number(process.env.RECOMMENDATION_SERVICE_TIMEOUT_MS);
     return Number.isInteger(configured) && configured > 0 ? configured : 10_000;
@@ -32,7 +25,6 @@ export const toMatchingContext = (context: IContext) => ({
     interactionPreference: context.interactionPreference
 });
 
-/** One human-readable reason for a match, produced by explain.py. */
 export interface MatchReason {
     code: string;
     text: string;
@@ -73,8 +65,6 @@ export const requestScores = async (
     if (internalKey) {
         headers["X-Internal-Key"] = internalKey;
     } else if (process.env.NODE_ENV === "production") {
-        // Fail closed: never call the scoring service without the key in
-        // production (the service would refuse it anyway).
         console.error("INTERNAL_API_KEY is not set; refusing to call the recommendation service.");
         throw new Error("RECOMMENDATION_SERVICE_UNAVAILABLE");
     }
@@ -101,7 +91,6 @@ export const requestScores = async (
         const body = await response.text();
         console.error("Recommendation service error:", response.status, body);
 
-        // The service is up but its embedding model is not: only SEMANTIC fails.
         if (response.status === 503 && body.includes("SEMANTIC_MATCHER_UNAVAILABLE")) {
             throw new Error("SEMANTIC_MATCHER_UNAVAILABLE");
         }

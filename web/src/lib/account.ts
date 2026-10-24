@@ -1,11 +1,3 @@
-/**
- * Delete-account rules. Pure functions only (no database), so they can be
- * unit tested and shared with the browser.
- *
- * Accounts with a password must re-enter it. Google-only accounts have no
- * password, so they type DELETE_CONFIRMATION instead.
- */
-
 export const DELETE_CONFIRMATION = "DELETE";
 
 export type DeleteCheck =

@@ -35,8 +35,6 @@ export default function RegisterPage() {
     event.preventDefault();
     setMessage("");
 
-    // Client-side checks mirror the backend registerSchema (min 8 chars),
-    // so the user gets a specific message instead of "Invalid registration data."
     if (!passwordLongEnough) {
       setMessage(
         `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
@@ -62,7 +60,6 @@ export default function RegisterPage() {
 
       setToken();
 
-      // A new account has no profile or context yet, so start onboarding at /profile.
       router.push("/profile?onboarding=1");
     } catch (error) {
       setMessage(

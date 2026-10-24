@@ -5,7 +5,6 @@ import { errorResponse, readJsonBody } from "@/server/http";
 import { Report } from "@/server/models/Report";
 import { reportReviewSchema } from "@/server/validation";
 
-/** Marks a report as reviewed. Body: { "status": "reviewed" }. Admin only. */
 export const PATCH = async (
     request: Request,
     { params }: { params: Promise<{ id: string }> }

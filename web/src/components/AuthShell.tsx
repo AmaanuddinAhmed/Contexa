@@ -1,9 +1,5 @@
 import ScanRadar from "@/components/ScanRadar";
 
-/**
- * Frame for the login and register forms: the form on the left, the
- * radar (idle, slow) beside it on large screens only.
- */
 export default function AuthShell({
   title,
   lede,

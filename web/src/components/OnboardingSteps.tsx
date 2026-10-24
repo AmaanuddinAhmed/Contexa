@@ -1,6 +1,5 @@
 const STEPS = ["Profile", "Context", "Matches"];
 
-/** Progress through sign-up: profile, then context, then the first scan. */
 export default function OnboardingSteps({ current }: { current: 1 | 2 }) {
   return (
     <ol

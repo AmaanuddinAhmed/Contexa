@@ -35,8 +35,6 @@ const contextSchema = new Schema<IContext>(
             type: [String],
             default: []
         },
-        // Normalised needs, used only for indexed candidate retrieval.
-        // Removed from API responses by the toJSON transform below.
         needTerms: {
             type: [String],
             default: []
@@ -85,22 +83,14 @@ const contextSchema = new Schema<IContext>(
     }
 );
 
-/**
- * A context counts as current when it is active AND not expired.
- * validUntil is optional: a missing (or null) value means "no expiry".
- * Expired contexts are filtered out at query time, so no cleanup job is needed.
- */
 export const currentContextFilter = (now: Date = new Date()) => ({
     isActive: true,
     $or: [{ validUntil: null }, { validUntil: { $gt: now } }]
 });
 
-// Candidate retrieval: active contexts needing at least one term.
 contextSchema.index({ isActive: 1, needTerms: 1 });
-// Loading the active contexts of a set of candidates.
 contextSchema.index({ userId: 1, isActive: 1 });
 
-// Reuse the compiled model when Next.js reloads this module in development.
 export const Context =
     (mongoose.models.Context as mongoose.Model<IContext> | undefined) ??
     mongoose.model<IContext>("Context", contextSchema);

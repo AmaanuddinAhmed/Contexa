@@ -50,7 +50,6 @@ const formatDay = (value: string) =>
 const isSameDay = (first: string, second: string) =>
   new Date(first).toDateString() === new Date(second).toDateString();
 
-/** One tick: sent. Two ticks: the other person has read it. */
 function ReadTicks({ seen }: { seen: boolean }) {
   return (
     <span
@@ -104,15 +103,11 @@ function Thread({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  // Read receipts: the other person has read my messages up to this time.
   const [seenUpTo, setSeenUpTo] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
-  // Follow new messages only while the reader is at the bottom.
   const stickToBottom = useRef(true);
-  // Height before older messages were added on top, to keep the view still.
   const heightBeforeOlder = useRef<number | null>(null);
-  // Latest list, for the poll (which must not restart on every message).
   const messagesRef = useRef<ChatMessage[]>([]);
 
   useEffect(() => {
@@ -134,7 +129,6 @@ function Thread({
     }
   }, [messages]);
 
-  // First load: the latest page. Opening it marks it read on the server.
   useEffect(() => {
     let cancelled = false;
 
@@ -163,7 +157,6 @@ function Thread({
     };
   }, [conversationPath]);
 
-  // Returns true when something new arrived, which keeps polling fast.
   const poll = useCallback(async (): Promise<boolean> => {
     const known = messagesRef.current;
     const latest = known.at(-1)?.createdAt;
@@ -197,7 +190,6 @@ function Thread({
     }
   }, [conversationPath]);
 
-  // Every second during a live chat, backing off to 10 s when quiet.
   const markActive = useAdaptivePolling(poll, threadPollDelay, !loading);
 
   const loadOlder = async () => {
@@ -255,7 +247,6 @@ function Thread({
     }
   };
 
-  // Enter sends; Shift+Enter starts a new line.
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       event.key === "Enter" &&
@@ -502,12 +493,10 @@ function MessagesView() {
     };
   }, []);
 
-  // A request was accepted (new conversation) or a connection removed.
   useConnectionsChanged(() => {
     api<ConnectionsResponse>("/connections", { token: getToken() ?? undefined })
       .then((response) => setConnections(response.data.connections))
       .catch(() => {
-        // The next change retries.
       });
   });
 
@@ -518,7 +507,6 @@ function MessagesView() {
       });
       setUnread(response.data.byConnection);
     } catch {
-      // Badges are a convenience; the next refresh retries.
     }
   }, []);
 
@@ -531,7 +519,6 @@ function MessagesView() {
     return () => window.removeEventListener(MESSAGES_READ_EVENT, onRead);
   }, [refreshUnread]);
 
-  // The header's poll notices new messages; per-conversation counts follow.
   useUnreadChanged(() => void refreshUnread());
 
   const selected = connections.find((item) => item.id === selectedId) ?? null;
@@ -635,7 +622,6 @@ function MessagesView() {
 
         <div className={`min-h-0 md:block ${selected ? "block" : "hidden"}`}>
           {selected ? (
-            // Keyed so each conversation starts with fresh state.
             <Thread
               key={selected.id}
               connection={selected}
@@ -676,7 +662,6 @@ function MessagesView() {
 }
 
 export default function MessagesPage() {
-  // useSearchParams needs a Suspense boundary in a client page.
   return (
     <Suspense fallback={null}>
       <MessagesView />

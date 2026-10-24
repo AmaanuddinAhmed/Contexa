@@ -58,7 +58,6 @@ export default function SiteHeader() {
   const menuRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
-  // The Evaluation link is only a convenience: /api/v1/admin/* checks the role itself.
   useEffect(() => {
     const token = getToken();
 
@@ -75,7 +74,6 @@ export default function SiteHeader() {
         }
       })
       .catch(() => {
-        // Leave the link hidden.
       });
 
     return () => {
@@ -88,8 +86,6 @@ export default function SiteHeader() {
       ? [...NAV_LINKS, { href: "/admin", label: "Evaluation" }]
       : NAV_LINKS;
 
-  // Badges for unread messages and requests. Pages listen to what this
-  // publishes, so it is the only poll that runs on every page.
   const refreshNotifications = useCallback(async () => {
     const token = getToken();
 
@@ -107,7 +103,6 @@ export default function SiteHeader() {
       });
       publishNotifications(response.data);
     } catch {
-      // Badges are a convenience; the next refresh retries.
     }
   }, []);
 
@@ -138,8 +133,6 @@ export default function SiteHeader() {
         : null;
   const totalNew = counts.messages + counts.requests;
 
-  // While the mobile menu is open: lock page scroll, close on Escape,
-  // and move focus into the menu.
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -162,7 +155,6 @@ export default function SiteHeader() {
     };
   }, [menuOpen]);
 
-  // The menu only exists below the lg breakpoint; close it if the window grows.
   useEffect(() => {
     if (!menuOpen) return;
 

@@ -1,21 +1,3 @@
-"""
-CONTEXA match explanations: "why was this person recommended?"
-
-Pure functions only: no database, no I/O, and no effect on scores.
-
-Every reason is derived from the same inputs and the same normalisation as
-matching.py, and a reason appears exactly when its factor contributed to the
-score (factor > 0). tests/test_explain.py checks this against the parity
-fixtures.
-
-Reasons are written from the requester's point of view ("you" = the person
-asking for recommendations, "they" = the candidate).
-
-With the SEMANTIC matcher, a match between different terms is shown as
-"Machine Learning ≈ Deep Learning", so the reason still names exactly what
-produced the credit.
-"""
-
 from __future__ import annotations
 
 from typing import Optional, TypedDict
@@ -31,7 +13,6 @@ from matching import (
     interaction_similarity,
 )
 
-# How many items to name in a reason's text before "+N more".
 MAX_ITEMS_IN_TEXT = 4
 
 
@@ -42,10 +23,6 @@ class Reason(TypedDict):
 
 
 def _matched(values: list[str], reference: list[str]) -> list[str]:
-    """
-    Items of `values` whose normalised form appears in `reference`.
-    Keeps the original spelling and order; duplicates are listed once.
-    """
     reference_set = {_normalize(item) for item in reference}
     seen: set[str] = set()
     matched: list[str] = []
@@ -61,7 +38,6 @@ def _matched(values: list[str], reference: list[str]) -> list[str]:
 
 
 def _matched_by(terms: TermMatcher, values: list[str], reference: list[str]) -> list[str]:
-    """`_matched` for EXACT; the matcher's own version (with ≈ labels) otherwise."""
     if terms is EXACT:
         return _matched(values, reference)
 
@@ -87,7 +63,6 @@ def _capabilities(profile: ProfileData) -> list[str]:
 def profile_reasons(
     first: ProfileData, second: ProfileData, terms: TermMatcher = EXACT
 ) -> list[Reason]:
-    """Reasons behind the profile-similarity score, in weight order."""
     reasons: list[Reason] = []
 
     shared_skills = _matched_by(terms, first.get("skills", []), second.get("skills", []))
@@ -144,10 +119,8 @@ def context_reasons(
     context_b: ContextData,
     terms: TermMatcher = EXACT,
 ) -> list[Reason]:
-    """Reasons behind the CONTEXT_AWARE score, in weight order."""
     reasons: list[Reason] = []
 
-    # Complementarity (weight 0.45), both directions.
     they_cover = _matched_by(terms, context_a["need"], _capabilities(profile_b))
     if they_cover:
         reasons.append(_reason(
@@ -164,17 +137,14 @@ def context_reasons(
             you_cover,
         ))
 
-    # Profile similarity (weight 0.30).
     reasons.extend(profile_reasons(profile_a, profile_b, terms))
 
-    # Shared needs (weight 0.10).
     shared_needs = _matched_by(terms, context_a["need"], context_b["need"])
     if shared_needs:
         reasons.append(_reason(
             "SHARED_NEEDS", f"You're both looking for: {_join(shared_needs)}", shared_needs
         ))
 
-    # Activity, availability, interaction preference (weight 0.05 each).
     activity_a, activity_b = context_a["activity"], context_b["activity"]
     if terms.text_similarity(activity_a, activity_b) > 0:
         if _normalize(activity_a) == _normalize(activity_b):
@@ -232,7 +202,6 @@ def explain_match(
     candidate_context: ContextData,
     terms: TermMatcher = EXACT,
 ) -> list[Reason]:
-    """Same inputs as matching.score_candidate; returns the reasons only."""
     if mode == "PROFILE_ONLY":
         return profile_reasons(requester_profile, candidate_profile, terms)
 

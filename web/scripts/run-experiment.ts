@@ -1,17 +1,3 @@
-/**
- * Synthetic experiment: ranks every requester under all four variants
- * (PROFILE_ONLY / CONTEXT_AWARE x EXACT / SEMANTIC), once with their own
- * context and once with another user's context, and stores the lists and a
- * summary in the `experiments` collection. See src/server/evaluation/experiment.ts.
- *
- * Uses the same candidate generation and scoring service as the app, so the
- * recommendation service must be running (RECOMMENDATION_SERVICE_URL).
- *
- * Run from web/:
- *   npm run experiment
- *   npm run experiment -- --k=10 --population=all --seed=42 --name="After weight change"
- *   npm run experiment -- --matchers=EXACT       (if semantic matching is unavailable)
- */
 import mongoose from "mongoose";
 import {
     contextDonors,
@@ -36,7 +22,6 @@ import { rankForRequester } from "../src/server/recommendations/service";
 import { connectForScript } from "./lib/database";
 
 const SYNTHETIC_EMAIL = /@synthetic\.contexa\.local$/;
-// Requesters processed at once; each makes up to 8 scoring calls.
 const CONCURRENCY = 4;
 
 const readArgs = () => {
@@ -80,7 +65,6 @@ const readArgs = () => {
     };
 };
 
-/** Requesters: users in the population with a public profile and a current context. */
 const loadRequesters = async (population: "synthetic" | "all") => {
     const users = await User.find({ isActive: true }).select({ email: 1 }).lean();
     const ids = users
@@ -92,7 +76,6 @@ const loadRequesters = async (population: "synthetic" | "all") => {
         Context.find({ userId: { $in: ids }, ...currentContextFilter() }).sort({ createdAt: -1 })
     ]);
 
-    // Newest current context per user (find() is sorted newest first).
     const contextByUser = new Map<string, IContext>();
     for (const context of contexts) {
         const key = context.userId.toString();

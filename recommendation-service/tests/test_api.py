@@ -1,5 +1,3 @@
-"""API contract tests for POST /internal/recommend (positive and negative)."""
-
 import importlib
 
 import pytest
@@ -124,7 +122,6 @@ def test_internal_key_enforced_when_configured(monkeypatch):
     monkeypatch.delenv("INTERNAL_API_KEY")
     importlib.reload(main) 
 
-# ---------- production key requirement (fail closed) ----------
 
 STRONG_KEY = "k" * 64
 
@@ -166,7 +163,7 @@ def test_render_without_key_does_not_start(monkeypatch):
     importlib.reload(main)
 
     with pytest.raises(RuntimeError, match="must be set"):
-        with TestClient(main.app):  # entering runs the startup (lifespan)
+        with TestClient(main.app):
             pass
 
     monkeypatch.delenv("RENDER")
@@ -185,7 +182,6 @@ def test_production_hides_docs_and_requires_key(monkeypatch):
         assert client.post("/internal/recommend", json=body()).status_code == 401
         assert client.post("/internal/recommend", json=body(),
                            headers={"X-Internal-Key": STRONG_KEY}).status_code == 200
-        # Key checked before the body: no validation details without the key.
         assert client.post("/internal/recommend", json={}).status_code == 401
 
     monkeypatch.delenv("ENVIRONMENT")
@@ -196,7 +192,6 @@ def test_production_hides_docs_and_requires_key(monkeypatch):
 def test_development_keeps_docs(client):
     assert client.get("/docs").status_code == 200
 
-# ---------- matcher (EXACT / SEMANTIC) ----------
 
 from conftest import BrokenEmbedder, FakeEmbedder  # noqa: E402
 
